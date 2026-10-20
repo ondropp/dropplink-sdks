@@ -1,0 +1,5 @@
+// Copy to Dropplink.xcconfig (git-ignored) and fill in the iOS key from the Dropp dashboard.
+// In Xcode: Project → Info → Configurations → set this file for Debug and Release.
+// Note: `//` starts a comment in xcconfig files, so a URL value would need `/$()/`.
+DROPPLINK_KEY_ID = ak_0000000000000000
+DROPPLINK_SECRET = replace-me

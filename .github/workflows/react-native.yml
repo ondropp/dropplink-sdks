@@ -1,0 +1,35 @@
+name: React Native
+
+on:
+  push:
+    branches: [main]
+    paths: ['react-native/**', '.github/workflows/react-native.yml']
+  pull_request:
+    paths: ['react-native/**', '.github/workflows/react-native.yml']
+
+concurrency:
+  group: react-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: react-native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: react-native/package-lock.json
+      - name: Install dependencies
+        # Also runs `prepare` (bob build), so the library build is checked too.
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm test

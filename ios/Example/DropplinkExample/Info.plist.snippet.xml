@@ -1,0 +1,5 @@
+<!-- Add to the app target's Info.plist (or Info tab). Values are filled from Dropplink.xcconfig at build time. -->
+<key>DropplinkKeyId</key>
+<string>$(DROPPLINK_KEY_ID)</string>
+<key>DropplinkSecret</key>
+<string>$(DROPPLINK_SECRET)</string>

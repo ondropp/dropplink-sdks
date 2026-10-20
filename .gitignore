@@ -1,0 +1,17 @@
+.DS_Store
+.idea/
+*.iml
+.vscode/
+node_modules/
+build/
+.gradle/
+local.properties
+.build/
+.swiftpm/
+DerivedData/
+Pods/
+*.xcworkspace/xcuserdata/
+.dart_tool/
+.packages
+pubspec.lock
+react-native/lib/

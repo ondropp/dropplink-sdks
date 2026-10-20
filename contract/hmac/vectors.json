@@ -1,0 +1,30 @@
+{
+  "description": "X-Signature = hex(HMAC_SHA256(key = UTF-8 secret, msg = timestamp + \"\\n\" + hex(SHA256(raw body bytes)))). Sign the exact bytes you send.",
+  "secret": "test-secret-not-real-6Qh2v1rS0fJp8kZr3mW9yX4bN7cL5dE1",
+  "cases": [
+    {
+      "name": "init-body",
+      "timestamp": "1760700000",
+      "body": "{\"installId\":\"6f1c2a9e-3b7d-4c51-9a8e-2d4f6b1c0e73\",\"platform\":\"android\",\"appVersion\":\"3.2.1\",\"sdkVersion\":\"0.1.0\",\"device\":{\"model\":\"Pixel 8\",\"osVersion\":\"15\",\"locale\":\"en-IN\",\"timezone\":\"Asia/Kolkata\",\"screen\":{\"w\":1080,\"h\":2400,\"dpr\":2.625}},\"installReferrer\":{\"raw\":\"utm_source=dropp&click_id=c_8b1f0e7d2a4c4f6e\",\"clickId\":\"c_8b1f0e7d2a4c4f6e\",\"referrerClickTs\":1760700000,\"installBeginTs\":1760700042}}",
+      "bodySha256": "8aa4db7f66cbe4a83d0d1c783fd067e4a5d5ce5f1e4d385c8db59bde65b0b9f5",
+      "signingString": "1760700000\n8aa4db7f66cbe4a83d0d1c783fd067e4a5d5ce5f1e4d385c8db59bde65b0b9f5",
+      "signature": "9f06876da1bac2e5f6d2ec5a57415506da03ec293a21979da8159b7adf5cbed5"
+    },
+    {
+      "name": "empty-body",
+      "timestamp": "1760700000",
+      "body": "",
+      "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "signingString": "1760700000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "signature": "53321e4a021b5172eaf043159efd3d2bbb8bd5ac293602b6ee354832ff8b8a0c"
+    },
+    {
+      "name": "unicode-body",
+      "timestamp": "1760700001",
+      "body": "{\"name\":\"खरीदारी\",\"emoji\":\"🛒\"}",
+      "bodySha256": "f685a21d8bae8fb9e15c9e0526c98da6b31c157bd32c62884668fbe3a12dd53e",
+      "signingString": "1760700001\nf685a21d8bae8fb9e15c9e0526c98da6b31c157bd32c62884668fbe3a12dd53e",
+      "signature": "85769f2fdde1d1c36d925decb78ef6dd17d701e179dd2517bd9488eaa0ba1ab1"
+    }
+  ]
+}

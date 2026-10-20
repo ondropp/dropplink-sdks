@@ -1,0 +1,10 @@
+{
+  "clickId": "c_3d9a0b1c2e4f6a8b",
+  "deepLink": {
+    "path": "/product/123",
+    "params": {
+      "variant": "red",
+      "ref": "story"
+    }
+  }
+}

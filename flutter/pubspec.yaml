@@ -1,0 +1,33 @@
+name: dropplink
+description: >-
+  Dropplink install attribution and deep linking for Flutter. A thin bridge to
+  the native Dropplink SDKs for Android and iOS.
+version: 0.1.0
+topics:
+  - attribution
+  - deep-linking
+  - app-links
+  - universal-links
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+  # 3.38 is the first release with UIScene plugin callbacks (addSceneDelegate).
+  flutter: ">=3.38.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: app.ondropp.dropplink.flutter
+        pluginClass: DropplinkPlugin
+      ios:
+        pluginClass: DropplinkPlugin

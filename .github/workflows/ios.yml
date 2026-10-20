@@ -1,0 +1,44 @@
+name: iOS
+
+on:
+  push:
+    branches: [main]
+    paths: ['ios/**', 'contract/**', '.github/workflows/ios.yml']
+  pull_request:
+    paths: ['ios/**', 'contract/**', '.github/workflows/ios.yml']
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift version
+        run: swift --version
+      - name: Build
+        run: swift build
+      - name: Test
+        # Tests read the shared fixtures from ../contract, so the whole repo must be checked out.
+        run: swift test
+      - name: Build for iOS Simulator
+        run: |
+          swift build --triple arm64-apple-ios13.0-simulator \
+            --sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)"
+
+  pod-lint:
+    runs-on: macos-15
+    # Optional: CocoaPods linting is slow and its failures shouldn't block SPM changes.
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint podspec
+        run: pod lib lint Dropplink.podspec --allow-warnings

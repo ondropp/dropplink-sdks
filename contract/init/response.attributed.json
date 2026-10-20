@@ -1,0 +1,21 @@
+{
+  "installId": "6f1c2a9e-3b7d-4c51-9a8e-2d4f6b1c0e73",
+  "attribution": {
+    "type": "attributed",
+    "method": "install_referrer",
+    "clickId": "c_8b1f0e7d2a4c4f6e",
+    "linkId": "6711a0c2f1e4b8a9c3d2e1f0",
+    "campaignId": "6711a0c2f1e4b8a9c3d2e1f1",
+    "creatorId": "6711a0c2f1e4b8a9c3d2e1f2",
+    "source": "instagram",
+    "confidence": 1,
+    "attributedAt": "2026-10-17T10:00:42.000Z"
+  },
+  "deepLink": {
+    "path": "/product/123",
+    "params": {
+      "ref": "creator",
+      "variant": "red"
+    }
+  }
+}

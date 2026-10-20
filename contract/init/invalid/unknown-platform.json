@@ -1,0 +1,23 @@
+{
+  "installId": "6f1c2a9e-3b7d-4c51-9a8e-2d4f6b1c0e73",
+  "platform": "web",
+  "appVersion": "3.2.1",
+  "sdkVersion": "0.1.0",
+  "device": {
+    "model": "Pixel 8",
+    "osVersion": "15",
+    "locale": "en-IN",
+    "timezone": "Asia/Kolkata",
+    "screen": {
+      "w": 1080,
+      "h": 2400,
+      "dpr": 2.625
+    }
+  },
+  "installReferrer": {
+    "raw": "utm_source=dropp&click_id=c_8b1f0e7d2a4c4f6e",
+    "clickId": "c_8b1f0e7d2a4c4f6e",
+    "referrerClickTs": 1760700000,
+    "installBeginTs": 1760700042
+  }
+}
