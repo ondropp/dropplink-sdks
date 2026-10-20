@@ -8,7 +8,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  dropplink:
+  dropplink_flutter:
     path: ../
 
 dev_dependencies:

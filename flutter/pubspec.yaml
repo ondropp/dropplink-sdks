@@ -1,4 +1,4 @@
-name: dropplink
+name: dropplink_flutter
 description: >-
   Dropplink install attribution and deep linking for Flutter. A thin bridge to
   the native Dropplink SDKs for Android and iOS.

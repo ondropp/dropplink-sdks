@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:dropplink/dropplink.dart';
+import 'package:dropplink_flutter/dropplink_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 

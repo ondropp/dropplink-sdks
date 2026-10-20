@@ -1,1 +1,1 @@
-rootProject.name = "dropplink"
+rootProject.name = "dropplink_flutter"

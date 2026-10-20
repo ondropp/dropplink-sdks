@@ -1,0 +1,34 @@
+PODS:
+  - Dropplink (0.1.0)
+  - dropplink_flutter (0.1.0):
+    - Dropplink (= 0.1.0)
+    - Flutter
+  - Flutter (1.0.0)
+  - integration_test (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - Dropplink (from `../../../ios`)
+  - dropplink_flutter (from `.symlinks/plugins/dropplink_flutter/ios`)
+  - Flutter (from `Flutter`)
+  - integration_test (from `.symlinks/plugins/integration_test/ios`)
+
+EXTERNAL SOURCES:
+  Dropplink:
+    :path: "../../../ios"
+  dropplink_flutter:
+    :path: ".symlinks/plugins/dropplink_flutter/ios"
+  Flutter:
+    :path: Flutter
+  integration_test:
+    :path: ".symlinks/plugins/integration_test/ios"
+
+SPEC CHECKSUMS:
+  Dropplink: 8cda5c7aaf165791f7eb27ba0e86e8a18afce92b
+  dropplink_flutter: 763b367c296b1e2d7b433ab44c7c2f4717c663ca
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+
+PODFILE CHECKSUM: 7b4811db4eab28c7688b0ea697a76ca6b73be521
+
+COCOAPODS: 1.16.2

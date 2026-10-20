@@ -54,7 +54,7 @@ val useLocalDropplinkSdk = providers.gradleProperty("dropplink.useLocalSdk").get
 if (useLocalDropplinkSdk && (localDropplinkSdk.resolve("settings.gradle.kts").exists() || localDropplinkSdk.resolve("settings.gradle").exists())) {
     val sdkProject = providers.gradleProperty("dropplink.localSdkProject").getOrElse(":dropplink")
     includeBuild(localDropplinkSdk) {
-        // The plugin's own Gradle project is also called "dropplink"; give the included build a distinct name.
+        // A distinct name, so the included build never clashes with the plugin's own Gradle project.
         name = "dropplink-android-sdk"
         dependencySubstitution {
             substitute(module("app.ondropp:dropplink-android")).using(project(sdkProject))

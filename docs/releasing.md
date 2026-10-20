@@ -14,7 +14,7 @@ The version appears in:
 | --- | --- |
 | `android/gradle.properties` (or the library's build file) | `VERSION_NAME`, and `Dropplink.VERSION` |
 | `ios/Sources/Dropplink/Dropplink.swift`, `ios/Dropplink.podspec` | `version` |
-| `flutter/pubspec.yaml`, `flutter/android/build.gradle`, `flutter/ios/dropplink.podspec` | package version and the native dependency versions |
+| `flutter/pubspec.yaml`, `flutter/android/build.gradle`, `flutter/ios/dropplink_flutter.podspec` | package version and the native dependency versions |
 | `react-native/package.json`, `react-native/android/build.gradle`, `react-native/*.podspec` | package version and the native dependency versions |
 | The dashboard, `dropplink/src/features/sdk/snippets.ts` | `SDK_VERSION` |
 

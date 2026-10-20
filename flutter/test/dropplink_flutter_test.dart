@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dropplink/dropplink.dart';
-import 'package:dropplink/src/channel.dart';
+import 'package:dropplink_flutter/dropplink_flutter.dart';
+import 'package:dropplink_flutter/src/channel.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -1,9 +1,9 @@
 #
 # Flutter bridge to the native Dropplink iOS SDK (pod 'Dropplink').
-# Run `pod lib lint dropplink.podspec` to validate before publishing.
+# Run `pod lib lint dropplink_flutter.podspec` to validate before publishing.
 #
 Pod::Spec.new do |s|
-  s.name             = 'dropplink'
+  s.name             = 'dropplink_flutter'
   s.version          = '0.1.0'
   s.summary          = 'Dropplink install attribution and deep linking for Flutter.'
   s.description      = <<-DESC

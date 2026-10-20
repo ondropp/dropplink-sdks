@@ -1,6 +1,6 @@
 // Runs against the real native SDKs on a device or simulator:
 //   flutter test integration_test
-import 'package:dropplink/dropplink.dart';
+import 'package:dropplink_flutter/dropplink_flutter.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 

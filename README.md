@@ -7,7 +7,7 @@ that brought them, and open deep links.
 | --- | --- | --- | --- |
 | Android (Kotlin/Java) | [`android/`](./android) | `implementation("app.ondropp:dropplink-android:0.1.0")` | [README](./android/README.md) |
 | iOS (Swift) | [`ios/`](./ios) | SPM or `pod 'Dropplink', '~> 0.1.0'` | [README](./ios/README.md) |
-| Flutter | [`flutter/`](./flutter) | `flutter pub add dropplink` | [README](./flutter/README.md) |
+| Flutter | [`flutter/`](./flutter) | `flutter pub add dropplink_flutter` | [README](./flutter/README.md) |
 | React Native | [`react-native/`](./react-native) | `npm install @ondropp/dropplink-react-native` | [README](./react-native/README.md) |
 
 ## How it fits together

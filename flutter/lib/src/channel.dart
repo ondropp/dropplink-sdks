@@ -4,7 +4,7 @@ import 'models.dart';
 
 /// The platform-channel bridge to the native Dropplink SDKs.
 ///
-/// Internal: not exported from `package:dropplink/dropplink.dart`. All logic
+/// Internal: not exported from `package:dropplink_flutter/dropplink_flutter.dart`. All logic
 /// (signing, storage, retries, link buffering) lives in the native SDKs; this
 /// class only forwards calls and converts results.
 class DropplinkChannel {
