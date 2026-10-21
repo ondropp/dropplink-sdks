@@ -1,10 +1,11 @@
 Pod::Spec.new do |s|
   s.name             = 'Dropplink'
-  s.version          = '0.1.0'
-  s.summary          = 'Install attribution and deferred deep links for apps using Dropp links.'
+  s.version          = '0.2.0'
+  s.summary          = 'Install attribution, deferred deep links and in-app events for apps using Dropp links.'
   s.description      = <<-DESC
     Dropplink attributes app installs to the Dropp link that drove them, delivers deferred deep links
-    after a fresh install and resolves Universal Link opens. No third-party dependencies.
+    after a fresh install, resolves Universal Link opens and sends in-app events and user identify
+    through an offline-safe queue. No third-party dependencies.
   DESC
   s.homepage         = 'https://ondropp.app'
   s.license          = { :type => 'Proprietary', :text => 'Copyright Dropp. All rights reserved.' }

@@ -11,6 +11,19 @@ internal class InitResponse(val attribution: Attribution, val deepLink: DeepLink
 
 internal class DeepLinkResponse(val clickId: String?, val deepLink: DeepLinkTarget?)
 
+/** `/v1/events` 200: every event of the batch is accepted, a duplicate of an earlier attempt, or rejected. */
+internal class EventsResponse(
+    val accepted: Int,
+    val duplicates: Int,
+    val rejected: List<RejectedEvent>,
+    val warnings: List<EventWarning>,
+)
+
+internal data class RejectedEvent(val index: Int, val eventId: String?, val code: String, val message: String)
+
+/** E.g. `pii_in_props`: the server dropped [props] from the event before storing it. */
+internal data class EventWarning(val eventId: String?, val code: String, val props: List<String>)
+
 /** `{ "error": { "code", "message", "details"? } }` */
 internal data class ApiError(val code: String, val message: String, val details: String?)
 
@@ -33,6 +46,30 @@ internal object Responses {
     fun parseDeepLink(body: String): DeepLinkResponse {
         val json = JSONObject(body)
         return DeepLinkResponse(clickId = json.stringOrNull("clickId"), deepLink = parseDeepLinkTarget(json))
+    }
+
+    @Throws(JSONException::class)
+    fun parseEvents(body: String): EventsResponse {
+        val json = JSONObject(body)
+        val rejected = json.optJSONArray("rejected")
+        val warnings = json.optJSONArray("warnings")
+        return EventsResponse(
+            accepted = json.optInt("accepted"),
+            duplicates = json.optInt("duplicates"),
+            rejected = (0 until (rejected?.length() ?: 0)).map { i ->
+                val item = rejected!!.getJSONObject(i)
+                RejectedEvent(item.optInt("index", -1), item.stringOrNull("eventId"), item.optString("code"), item.optString("message"))
+            },
+            warnings = (0 until (warnings?.length() ?: 0)).map { i ->
+                val item = warnings!!.getJSONObject(i)
+                val props = item.optJSONArray("props")
+                EventWarning(
+                    eventId = item.stringOrNull("eventId"),
+                    code = item.optString("code"),
+                    props = (0 until (props?.length() ?: 0)).map { props!!.getString(it) },
+                )
+            },
+        )
     }
 
     /** `null` when the body isn't the standard error shape (e.g. an HTML page from a proxy). */

@@ -59,9 +59,60 @@ public final class DropplinkPlugin: NSObject, FlutterPlugin, FlutterStreamHandle
             result(Dropplink.attribution?.dictionary)
         case "getInstallId":
             result(Dropplink.installId)
+        case "track":
+            track(args, result: result)
+        case "identify":
+            guard let userId = args["userId"] as? String else {
+                result(FlutterError(code: "invalid_argument", message: "userId is required", details: nil))
+                return
+            }
+            Dropplink.identify(userId: userId, email: args["email"] as? String, phone: args["phone"] as? String)
+            result(nil)
+        case "logout":
+            Dropplink.logout()
+            result(nil)
+        case "setTrackingEnabled":
+            guard let enabled = args["enabled"] as? Bool else {
+                result(FlutterError(code: "invalid_argument", message: "enabled is required", details: nil))
+                return
+            }
+            Dropplink.setTrackingEnabled(enabled)
+            result(nil)
+        case "isTrackingEnabled":
+            result(Dropplink.isTrackingEnabled)
         default:
             result(FlutterMethodNotImplemented)
         }
+    }
+
+    private func track(_ args: [String: Any], result: @escaping FlutterResult) {
+        guard let name = args["name"] as? String else {
+            result(FlutterError(code: "invalid_argument", message: "name is required", details: nil))
+            return
+        }
+        var revenue: Revenue?
+        if let raw = args["revenue"] as? [String: Any] {
+            guard let amount = (raw["amount"] as? NSNumber)?.doubleValue, let currency = raw["currency"] as? String
+            else {
+                result(FlutterError(code: "invalid_argument", message: "revenue needs amount and currency", details: nil))
+                return
+            }
+            revenue = Revenue(amount: amount, currency: currency, orderId: raw["orderId"] as? String)
+        }
+        let props = (args["props"] as? [String: Any])?.mapValues(Self.propValue)
+        Dropplink.track(name, props: props, revenue: revenue)
+        result(nil)
+    }
+
+    /// Unboxes a prop value from the Flutter codec into a Swift value. Dart bools and numbers both
+    /// arrive as `NSNumber`, and `NSNumber(1) as? Bool` succeeds, so without this the native SDK
+    /// couldn't tell `true` from `1`. Null stays `NSNull`; other values are passed on for the native
+    /// SDK to drop (spec section 11).
+    static func propValue(_ value: Any) -> Any {
+        guard let number = value as? NSNumber else { return value }
+        if CFGetTypeID(number) == CFBooleanGetTypeID() { return number.boolValue }
+        if CFNumberIsFloatType(number) { return number.doubleValue }
+        return number.intValue
     }
 
     private func initialize(_ args: [String: Any], result: @escaping FlutterResult) {

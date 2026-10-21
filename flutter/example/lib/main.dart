@@ -87,6 +87,28 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _show(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _trackEvent() async {
+    await Dropplink.track(
+      'add_to_cart',
+      props: <String, Object?>{'sku': 'demo_sku', 'qty': 1, 'gift': false},
+    );
+    if (!mounted) return;
+    _show('Tracked add_to_cart (see the native log)');
+  }
+
+  Future<void> _identify() async {
+    // A real app passes its own opaque user id after sign-up or login.
+    await Dropplink.identify('demo_user_1');
+    if (!mounted) return;
+    _show('Identified demo_user_1');
+  }
+
   @override
   Widget build(BuildContext context) {
     final attribution = _attribution;
@@ -152,6 +174,24 @@ class _HomePageState extends State<HomePage> {
                       _Row('url', link.url),
                       _Row('isDeferred', link.isDeferred.toString()),
                     ],
+            ),
+            _Section(
+              title: 'Events',
+              children: [
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    FilledButton(
+                      onPressed: _trackEvent,
+                      child: const Text('Track add_to_cart'),
+                    ),
+                    OutlinedButton(
+                      onPressed: _identify,
+                      child: const Text('Identify demo_user_1'),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),

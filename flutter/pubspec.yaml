@@ -1,8 +1,8 @@
 name: dropplink_flutter
 description: >-
-  Dropplink install attribution and deep linking for Flutter. A thin bridge to
-  the native Dropplink SDKs for Android and iOS.
-version: 0.1.0
+  Dropplink install attribution, deep linking and in-app events for Flutter. A
+  thin bridge to the native Dropplink SDKs for Android and iOS.
+version: 0.2.0
 topics:
   - attribution
   - deep-linking

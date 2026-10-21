@@ -1,0 +1,9 @@
+{
+  "eventId": "3f2b8c1d-5e6a-4b7c-9d8e-0f1a2b3c4d5e",
+  "name": "add_to_cart",
+  "ts": 1760700100.5,
+  "props": {
+    "sku": "TSHIRT-M",
+    "qty": 1
+  }
+}

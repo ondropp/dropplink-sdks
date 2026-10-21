@@ -29,7 +29,7 @@ final class InitBodyTests: XCTestCase {
         assertSameShape(sent, fixture, path: "", optional: ["device.screen"])
         XCTAssertNil(sent["installReferrer"], "iOS never sends installReferrer")
         XCTAssertEqual(sent["platform"] as? String, "ios")
-        XCTAssertEqual(sent["sdkVersion"] as? String, "0.1.0")
+        XCTAssertEqual(sent["sdkVersion"] as? String, "0.2.0")
         XCTAssertEqual(sent["installId"] as? String, harness.core.installId)
 
         let screen = try XCTUnwrap((sent["device"] as? [String: Any])?["screen"] as? [String: Any])
@@ -39,9 +39,9 @@ final class InitBodyTests: XCTestCase {
     }
 
     func testWrapperSuffixesTheSDKVersion() {
-        XCTAssertEqual(DropplinkConfig(keyId: "ak_x", secret: "s").sdkVersion, "0.1.0")
-        XCTAssertEqual(DropplinkConfig(keyId: "ak_x", secret: "s", platformWrapper: "flutter").sdkVersion, "0.1.0-flutter")
-        XCTAssertEqual(DropplinkConfig(keyId: "ak_x", secret: "s", platformWrapper: "rn").sdkVersion, "0.1.0-rn")
+        XCTAssertEqual(DropplinkConfig(keyId: "ak_x", secret: "s").sdkVersion, "0.2.0")
+        XCTAssertEqual(DropplinkConfig(keyId: "ak_x", secret: "s", platformWrapper: "flutter").sdkVersion, "0.2.0-flutter")
+        XCTAssertEqual(DropplinkConfig(keyId: "ak_x", secret: "s", platformWrapper: "rn").sdkVersion, "0.2.0-rn")
     }
 
     func testLongValuesAreTruncatedToContractLimits() {
@@ -51,7 +51,7 @@ final class InitBodyTests: XCTestCase {
         XCTAssertEqual(device.osVersion.count, 32)
         XCTAssertEqual(device.locale.count, 35)
         XCTAssertEqual(device.timezone.count, 64)
-        let body = InitBody(installId: "x", appVersion: String(repeating: "9", count: 70), sdkVersion: "0.1.0", device: device)
+        let body = InitBody(installId: "x", appVersion: String(repeating: "9", count: 70), sdkVersion: "0.2.0", device: device)
         XCTAssertEqual(body.appVersion.count, 64)
         // Never splits a character (measured in UTF-16 units, as the server does).
         XCTAssertEqual("ab🛒".truncated(to: 3), "ab")

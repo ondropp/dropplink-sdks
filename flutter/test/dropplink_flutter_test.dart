@@ -170,6 +170,210 @@ void main() {
     });
   });
 
+  group('track', () {
+    test('drops a prop value the channel can\'t encode instead of throwing', () async {
+      await Dropplink.track('add_to_cart', props: {'at': DateTime(2026)});
+      expect(calls, isEmpty);
+    });
+
+    test('sends only the name when there are no props or revenue', () async {
+      await Dropplink.track('app_open');
+
+      expect(calls.single.method, 'track');
+      expect(calls.single.arguments, <String, Object?>{'name': 'app_open'});
+    });
+
+    test('sends props of every supported type, including null', () async {
+      await Dropplink.track(
+        'add_to_cart',
+        props: <String, Object?>{
+          'sku': 'A1',
+          'qty': 2,
+          'price': 499.5,
+          'gift': true,
+          'coupon': null,
+        },
+      );
+
+      expect(calls.single.arguments, <String, Object?>{
+        'name': 'add_to_cart',
+        'props': <String, Object?>{
+          'sku': 'A1',
+          'qty': 2,
+          'price': 499.5,
+          'gift': true,
+          'coupon': null,
+        },
+      });
+      // Bools and numbers must keep their types through the codec.
+      final props =
+          (calls.single.arguments as Map<Object?, Object?>)['props']!
+              as Map<Object?, Object?>;
+      expect(props['gift'], isA<bool>());
+      expect(props['qty'], isA<int>());
+      expect(props['price'], isA<double>());
+    });
+
+    test('sends revenue as a map', () async {
+      await Dropplink.track(
+        'purchase',
+        revenue: const Revenue(
+          amount: 1299.0,
+          currency: 'INR',
+          orderId: 'ord_123',
+        ),
+      );
+
+      expect(calls.single.arguments, <String, Object?>{
+        'name': 'purchase',
+        'revenue': <String, Object?>{
+          'amount': 1299.0,
+          'currency': 'INR',
+          'orderId': 'ord_123',
+        },
+      });
+    });
+
+    test('does not throw when the native call fails', () async {
+      messenger.setMockMethodCallHandler(methods, (call) async {
+        throw PlatformException(code: 'oops', message: 'native failure');
+      });
+
+      await expectLater(Dropplink.track('app_open'), completes);
+    });
+
+    test('does not throw when there is no native plugin', () async {
+      messenger.setMockMethodCallHandler(methods, null);
+
+      await expectLater(Dropplink.track('app_open'), completes);
+    });
+  });
+
+  group('Revenue', () {
+    test('serializes amount, currency and orderId', () {
+      expect(
+        const Revenue(amount: 9.99, currency: 'USD', orderId: 'o1').toMap(),
+        <String, Object?>{'amount': 9.99, 'currency': 'USD', 'orderId': 'o1'},
+      );
+    });
+
+    test('leaves out a null orderId and sends an int literal as double', () {
+      final map = const Revenue(amount: 10, currency: 'INR').toMap();
+
+      expect(map, <String, Object?>{'amount': 10.0, 'currency': 'INR'});
+      expect(map['amount'], isA<double>());
+    });
+
+    test('has value equality', () {
+      expect(
+        const Revenue(amount: 1.5, currency: 'INR', orderId: 'a'),
+        const Revenue(amount: 1.5, currency: 'INR', orderId: 'a'),
+      );
+      expect(
+        const Revenue(amount: 1.5, currency: 'INR'),
+        isNot(const Revenue(amount: 1.5, currency: 'USD')),
+      );
+    });
+  });
+
+  group('identify', () {
+    test('sends the user id alone', () async {
+      await Dropplink.identify('user_8812');
+
+      expect(calls.single.method, 'identify');
+      expect(calls.single.arguments, <String, Object?>{'userId': 'user_8812'});
+    });
+
+    test('sends email and phone when given', () async {
+      await Dropplink.identify(
+        'user_8812',
+        email: 'a@example.com',
+        phone: '+919812345678',
+      );
+
+      expect(calls.single.arguments, <String, Object?>{
+        'userId': 'user_8812',
+        'email': 'a@example.com',
+        'phone': '+919812345678',
+      });
+    });
+
+    test('does not throw when the native call fails', () async {
+      messenger.setMockMethodCallHandler(methods, (call) async {
+        throw PlatformException(code: 'oops');
+      });
+
+      await expectLater(Dropplink.identify('user_8812'), completes);
+    });
+  });
+
+  group('logout', () {
+    test('calls the native logout without arguments', () async {
+      await Dropplink.logout();
+
+      expect(calls.single.method, 'logout');
+      expect(calls.single.arguments, isNull);
+    });
+
+    test('does not throw when the native call fails', () async {
+      messenger.setMockMethodCallHandler(methods, (call) async {
+        throw PlatformException(code: 'oops');
+      });
+
+      await expectLater(Dropplink.logout(), completes);
+    });
+  });
+
+  group('setTrackingEnabled', () {
+    test('sends the flag', () async {
+      await Dropplink.setTrackingEnabled(false);
+      await Dropplink.setTrackingEnabled(true);
+
+      expect(calls.map((c) => c.method), <String>[
+        'setTrackingEnabled',
+        'setTrackingEnabled',
+      ]);
+      expect(calls[0].arguments, <String, Object?>{'enabled': false});
+      expect(calls[1].arguments, <String, Object?>{'enabled': true});
+    });
+
+    test('does not throw when the native call fails', () async {
+      messenger.setMockMethodCallHandler(methods, (call) async {
+        throw PlatformException(code: 'oops');
+      });
+
+      await expectLater(Dropplink.setTrackingEnabled(false), completes);
+    });
+  });
+
+  group('isTrackingEnabled', () {
+    test('returns the native value', () async {
+      reply = (_) => false;
+      expect(await Dropplink.isTrackingEnabled(), isFalse);
+
+      reply = (_) => true;
+      expect(await Dropplink.isTrackingEnabled(), isTrue);
+
+      expect(calls.first.method, 'isTrackingEnabled');
+      expect(calls.first.arguments, isNull);
+    });
+
+    test('reads a null answer as the default, true', () async {
+      expect(await Dropplink.isTrackingEnabled(), isTrue);
+    });
+
+    test(
+      'returns false instead of throwing when the native call fails',
+      () async {
+        messenger.setMockMethodCallHandler(methods, (call) async {
+          throw PlatformException(code: 'oops');
+        });
+
+        expect(await Dropplink.isTrackingEnabled(), isFalse);
+      },
+    );
+  });
+
   group('DropplinkDeepLink.fromMap', () {
     test('parses a deferred link from the init contract', () {
       final fixture = contract('init/response.attributed.json');

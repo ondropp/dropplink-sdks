@@ -3,6 +3,8 @@ import Foundation
 struct HTTPResponse: Sendable, Equatable {
     let statusCode: Int
     let body: Data
+    /// The `Retry-After` header in seconds, when present (the HTTP-date form isn't used by the server).
+    var retryAfter: TimeInterval? = nil
 }
 
 /// The SDK's only network seam. Tests swap in a fake; the app uses `URLSessionHTTPClient`.
@@ -33,7 +35,10 @@ final class URLSessionHTTPClient: HTTPClient {
                 if let error {
                     continuation.resume(throwing: error)
                 } else if let http = response as? HTTPURLResponse {
-                    continuation.resume(returning: HTTPResponse(statusCode: http.statusCode, body: data ?? Data()))
+                    let retryAfter = http.value(forHTTPHeaderField: "Retry-After")
+                        .flatMap { TimeInterval($0.trimmingCharacters(in: .whitespaces)) }
+                    continuation.resume(returning: HTTPResponse(statusCode: http.statusCode, body: data ?? Data(),
+                                                                retryAfter: retryAfter))
                 } else {
                     continuation.resume(throwing: URLError(.badServerResponse))
                 }

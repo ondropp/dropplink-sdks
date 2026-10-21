@@ -5,5 +5,8 @@ export type {
   DeepLink,
   DeepLinkListener,
   DropplinkConfig,
+  EventProps,
+  IdentifyTraits,
+  Revenue,
   Subscription,
 } from './types';

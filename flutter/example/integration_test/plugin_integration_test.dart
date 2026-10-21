@@ -34,4 +34,26 @@ void main() {
     // null on a fresh install with an unknown key; must not throw.
     await expectLater(Dropplink.getAttribution(), completes);
   });
+
+  testWidgets('setTrackingEnabled round-trips through the native SDK', (
+    tester,
+  ) async {
+    // The Dart calls swallow native failures, so check the value really
+    // reached the native SDK and came back.
+    await Dropplink.setTrackingEnabled(false);
+    expect(await Dropplink.isTrackingEnabled(), isFalse);
+    await Dropplink.setTrackingEnabled(true);
+    expect(await Dropplink.isTrackingEnabled(), isTrue);
+
+    await expectLater(
+      Dropplink.track(
+        'integration_test',
+        props: <String, Object?>{'ok': true, 'n': 1, 'x': 1.5, 'none': null},
+        revenue: const Revenue(amount: 1, currency: 'INR'),
+      ),
+      completes,
+    );
+    await expectLater(Dropplink.identify('integration_user'), completes);
+    await expectLater(Dropplink.logout(), completes);
+  });
 }

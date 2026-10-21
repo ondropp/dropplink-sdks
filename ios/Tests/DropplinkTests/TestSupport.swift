@@ -26,6 +26,7 @@ final class FakeHTTPClient: HTTPClient, @unchecked Sendable {
     // @unchecked: all state is guarded by `lock`.
     enum Reply {
         case status(Int, String)
+        case retryAfter(Int, String, TimeInterval)
         case networkError
     }
 
@@ -62,6 +63,8 @@ final class FakeHTTPClient: HTTPClient, @unchecked Sendable {
             throw URLError(.notConnectedToInternet)
         case .status(let code, let body):
             return HTTPResponse(statusCode: code, body: Data(body.utf8))
+        case .retryAfter(let code, let body, let seconds):
+            return HTTPResponse(statusCode: code, body: Data(body.utf8), retryAfter: seconds)
         }
     }
 }
@@ -83,13 +86,91 @@ final class Recorder<Value>: @unchecked Sendable {
     }
 }
 
-/// A core wired to fakes: no real network, no real waiting, its own UserDefaults suite.
+/// A clock tests move by hand.
+final class TestClock: @unchecked Sendable {
+    // @unchecked: all state is guarded by `lock`.
+    private let lock = NSLock()
+    private var current: Date
+
+    init(_ seconds: TimeInterval = 1_760_700_000) {
+        current = Date(timeIntervalSince1970: seconds)
+    }
+
+    var now: Date {
+        lock.lock(); defer { lock.unlock() }
+        return current
+    }
+
+    func advance(_ seconds: TimeInterval) {
+        lock.lock(); defer { lock.unlock() }
+        current += seconds
+    }
+}
+
+/// Holds scheduled work until a test runs it, so debounce and backoff timers are deterministic.
+final class ManualScheduler: Scheduler, @unchecked Sendable {
+    // @unchecked: all state is guarded by `lock`.
+    final class Work: ScheduledWork, @unchecked Sendable {
+        let delay: TimeInterval
+        let run: @Sendable () -> Void
+        private let lock = NSLock()
+        private var cancelled = false
+
+        init(delay: TimeInterval, run: @escaping @Sendable () -> Void) {
+            self.delay = delay
+            self.run = run
+        }
+
+        var isCancelled: Bool {
+            lock.lock(); defer { lock.unlock() }
+            return cancelled
+        }
+
+        func cancel() {
+            lock.lock(); defer { lock.unlock() }
+            cancelled = true
+        }
+    }
+
+    private let lock = NSLock()
+    private var scheduled: [Work] = []
+
+    func schedule(after delay: TimeInterval, _ work: @escaping @Sendable () -> Void) -> ScheduledWork {
+        let item = Work(delay: delay, run: work)
+        lock.lock(); defer { lock.unlock() }
+        scheduled.append(item)
+        return item
+    }
+
+    /// Delays of the work that is still waiting (not run, not cancelled), oldest first.
+    var pending: [TimeInterval] {
+        lock.lock(); defer { lock.unlock() }
+        return scheduled.filter { !$0.isCancelled }.map(\.delay)
+    }
+
+    /// Runs everything waiting now (not what that schedules). Returns how many ran.
+    @discardableResult
+    func runPending() -> Int {
+        let due: [Work] = {
+            lock.lock(); defer { lock.unlock() }
+            defer { scheduled = [] }
+            return scheduled.filter { !$0.isCancelled }
+        }()
+        due.forEach { $0.run() }
+        return due.count
+    }
+}
+
+/// A core wired to fakes: no real network, no real waiting, its own UserDefaults suite and queue file.
 struct TestHarness {
     let http = FakeHTTPClient()
     let sleeps = Recorder<TimeInterval>()
     let logs = Recorder<String>()
+    let scheduler = ManualScheduler()
+    let clock: TestClock
     let defaults: UserDefaults
     let storage: Storage
+    let queueFile: URL
     let core: DropplinkCore
     let queue = DispatchQueue(label: "dropplink.tests.delivery")
 
@@ -98,18 +179,25 @@ struct TestHarness {
     static let config = DropplinkConfig(keyId: "ak_3f9c1e2a7b6d4c80", secret: "test-secret", debug: true,
                                         baseURL: URL(string: "https://attribution.test")!)
 
-    init(defaults: UserDefaults? = nil) {
+    /// Pass another harness's `defaults` and `queueFile` to simulate an app restart.
+    init(defaults: UserDefaults? = nil, queueFile: URL? = nil, clock: TestClock = TestClock()) {
         let suite = "dropplink.tests.\(UUID().uuidString)"
         self.defaults = defaults ?? UserDefaults(suiteName: suite)!
         self.storage = Storage(defaults: self.defaults)
+        self.queueFile = queueFile ?? FileManager.default.temporaryDirectory
+            .appendingPathComponent("dropplink-tests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent(QueueFileStore.fileName)
+        self.clock = clock
         let sleeps = sleeps
         let logs = logs
         core = DropplinkCore(environment: .init(
             http: http,
             storage: storage,
+            queueStore: QueueFileStore(url: self.queueFile),
+            scheduler: scheduler,
             deviceInfo: { TestHarness.device },
             appVersion: { "3.2.1" },
-            now: { Date(timeIntervalSince1970: 1_760_700_000) },
+            now: { clock.now },
             sleep: { sleeps.append($0) },
             random: { 0.5 }, // no jitter
             deliveryQueue: queue,
@@ -126,6 +214,30 @@ struct TestHarness {
     func drainDeliveries() {
         queue.sync {}
     }
+
+    var events: EventPipeline { core.events }
+
+    /// Applies queued `track` / `identify` calls and writes the file.
+    func drainEvents() {
+        events.drain()
+    }
+
+    /// Fires the waiting timers (debounce, backoff) and waits for the flush they start.
+    func fireTimers() async {
+        drainEvents()
+        scheduler.runPending()
+        await events.waitUntilIdle()
+        drainEvents()
+    }
+
+    /// Paths of the requests sent so far, e.g. `["/v1/init", "/v1/events"]`.
+    var paths: [String] { http.requests.compactMap { $0.url?.path } }
+
+    func bodies(to path: String) -> [[String: Any]] {
+        http.requests(to: path).compactMap { request in
+            request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+        }
+    }
 }
 
 enum Fixtures {
@@ -133,6 +245,12 @@ enum Fixtures {
     static func initOrganic() throws -> String { try String(decoding: Contract.data("init/response.organic.json"), as: UTF8.self) }
     static func deeplinkMatched() throws -> String { try String(decoding: Contract.data("deeplink/response.matched.json"), as: UTF8.self) }
     static func deeplinkNone() throws -> String { try String(decoding: Contract.data("deeplink/response.none.json"), as: UTF8.self) }
+
+    static func eventsOK(accepted: Int) -> String {
+        #"{"accepted":\#(accepted),"duplicates":0,"rejected":[],"warnings":[]}"#
+    }
+
+    static func identifyOK() throws -> String { try String(decoding: Contract.data("identify/response.json"), as: UTF8.self) }
 
     static func error(_ code: String, _ message: String = "message") -> String {
         #"{"error":{"code":"\#(code)","message":"\#(message)"}}"#

@@ -5,6 +5,7 @@ struct ContentView: View {
     @ObservedObject var model: ExampleModel
     @State private var installId = Dropplink.installId
     @State private var attribution = Dropplink.attribution
+    @State private var trackingEnabled = Dropplink.isTrackingEnabled
 
     var body: some View {
         NavigationView {
@@ -31,6 +32,22 @@ struct ContentView: View {
                         installId = Dropplink.installId
                         attribution = Dropplink.attribution
                     }
+                }
+
+                Section(header: Text("Events"), footer: Text("With debug on, Console shows each event queued and sent.")) {
+                    Button("Track add_to_cart") {
+                        Dropplink.track("add_to_cart", props: ["sku": "TSHIRT-M", "qty": 1])
+                    }
+                    // App-reported only: purchases that pay creators come from the brand's server.
+                    Button("Track purchase (₹499)") {
+                        Dropplink.track("purchase", revenue: Revenue(amount: 499, currency: "INR", orderId: UUID().uuidString))
+                    }
+                    Button("Identify demo_user_1") { Dropplink.identify(userId: "demo_user_1") }
+                    Button("Logout") { Dropplink.logout() }
+                    Toggle("Tracking enabled", isOn: Binding(
+                        get: { trackingEnabled },
+                        set: { Dropplink.setTrackingEnabled($0); trackingEnabled = $0 }
+                    ))
                 }
 
                 Section(header: Text("Last deep link")) {

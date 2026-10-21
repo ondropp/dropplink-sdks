@@ -16,6 +16,15 @@ function setup(options: { linked?: boolean; initialUrl?: string | null } = {}) {
     ),
     getInstallId: jest.fn((): Promise<string | null> => Promise.resolve(null)),
     setDeepLinkListenerEnabled: jest.fn(),
+    track: jest.fn(
+      (_name: string, _props: object | null, _revenue: object | null) => {}
+    ),
+    identify: jest.fn(
+      (_userId: string, _email: string | null, _phone: string | null) => {}
+    ),
+    logout: jest.fn(),
+    setTrackingEnabled: jest.fn((_enabled: boolean) => {}),
+    isTrackingEnabled: jest.fn((): Promise<boolean> => Promise.resolve(true)),
     addListener: jest.fn(),
     removeListeners: jest.fn(),
   };
@@ -346,5 +355,140 @@ describe('listenToLinking', () => {
     openUrl('https://go.brand.com/x');
     await flush();
     expect(nativeModule.handleDeepLink).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('track', () => {
+  it('forwards the name with null props and revenue when omitted', () => {
+    const { api, nativeModule } = setup();
+    api.Dropplink.track('app_open');
+    expect(nativeModule.track).toHaveBeenCalledWith('app_open', null, null);
+  });
+
+  it('forwards props unchanged, keeping strings, numbers, booleans and null', () => {
+    const { api, nativeModule } = setup();
+    const props = { sku: 'A1', qty: 2, price: 9.5, gift: false, coupon: null };
+    api.Dropplink.track('add_to_cart', { props });
+    expect(nativeModule.track).toHaveBeenCalledWith('add_to_cart', props, null);
+  });
+
+  it('forwards revenue with a missing orderId as null', () => {
+    const { api, nativeModule } = setup();
+    api.Dropplink.track('purchase', {
+      revenue: { amount: 499.99, currency: 'INR' },
+    });
+    expect(nativeModule.track).toHaveBeenCalledWith('purchase', null, {
+      amount: 499.99,
+      currency: 'INR',
+      orderId: null,
+    });
+  });
+
+  it('forwards props and revenue together, dropping unknown revenue keys', () => {
+    const { api, nativeModule } = setup();
+    api.Dropplink.track('purchase', {
+      props: { plan: 'pro' },
+      revenue: {
+        amount: 10,
+        currency: 'usd',
+        orderId: 'ord_1',
+        extra: 1,
+      } as Api.Revenue,
+    });
+    expect(nativeModule.track).toHaveBeenCalledWith(
+      'purchase',
+      { plan: 'pro' },
+      // Validation (e.g. upper-casing the currency) is native.
+      { amount: 10, currency: 'usd', orderId: 'ord_1' }
+    );
+  });
+});
+
+describe('identify', () => {
+  it('forwards the user id with null traits when omitted', () => {
+    const { api, nativeModule } = setup();
+    api.Dropplink.identify('user_8812');
+    expect(nativeModule.identify).toHaveBeenCalledWith('user_8812', null, null);
+  });
+
+  it('forwards email and phone in plain text (hashed natively)', () => {
+    const { api, nativeModule } = setup();
+    api.Dropplink.identify('user_8812', {
+      email: 'a@b.com',
+      phone: '+919812345678',
+    });
+    expect(nativeModule.identify).toHaveBeenCalledWith(
+      'user_8812',
+      'a@b.com',
+      '+919812345678'
+    );
+  });
+
+  it('forwards only the traits given', () => {
+    const { api, nativeModule } = setup();
+    api.Dropplink.identify('u', { phone: '+919812345678' });
+    expect(nativeModule.identify).toHaveBeenCalledWith(
+      'u',
+      null,
+      '+919812345678'
+    );
+  });
+});
+
+describe('logout and tracking consent', () => {
+  it('forwards logout', () => {
+    const { api, nativeModule } = setup();
+    api.Dropplink.logout();
+    expect(nativeModule.logout).toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards setTrackingEnabled', () => {
+    const { api, nativeModule } = setup();
+    api.Dropplink.setTrackingEnabled(false);
+    api.Dropplink.setTrackingEnabled(true);
+    expect(nativeModule.setTrackingEnabled.mock.calls).toEqual([
+      [false],
+      [true],
+    ]);
+  });
+
+  it('isTrackingEnabled resolves the native value', async () => {
+    const { api, nativeModule } = setup();
+    await expect(api.Dropplink.isTrackingEnabled()).resolves.toBe(true);
+    nativeModule.isTrackingEnabled.mockResolvedValueOnce(false);
+    await expect(api.Dropplink.isTrackingEnabled()).resolves.toBe(false);
+  });
+});
+
+describe('events and users never throw', () => {
+  const callAll = (api: typeof Api) => {
+    api.Dropplink.track('purchase', {
+      props: { a: 1 },
+      revenue: { amount: 1, currency: 'INR' },
+    });
+    api.Dropplink.identify('u', { email: 'a@b.com' });
+    api.Dropplink.logout();
+    api.Dropplink.setTrackingEnabled(false);
+  };
+
+  it('are no-ops when the module is not linked', async () => {
+    const { api } = setup({ linked: false });
+    expect(() => callAll(api)).not.toThrow();
+    await expect(api.Dropplink.isTrackingEnabled()).resolves.toBe(false);
+  });
+
+  it('swallow native exceptions and rejections', async () => {
+    const { api, nativeModule } = setup();
+    const boom = () => {
+      throw new Error('native');
+    };
+    nativeModule.track.mockImplementation(boom);
+    nativeModule.identify.mockImplementation(boom);
+    nativeModule.logout.mockImplementation(boom);
+    nativeModule.setTrackingEnabled.mockImplementation(boom);
+    nativeModule.isTrackingEnabled.mockRejectedValueOnce(new Error('native'));
+    expect(() => callAll(api)).not.toThrow();
+    expect(nativeModule.track).toHaveBeenCalledTimes(1);
+    await expect(api.Dropplink.isTrackingEnabled()).resolves.toBe(false);
   });
 });

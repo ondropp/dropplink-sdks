@@ -56,6 +56,15 @@ export default function App() {
         </Text>
 
         <Button title="Refresh" onPress={refresh} />
+
+        {/* Events are queued natively and sent in the background; with debug on, Logcat / the
+            Xcode console shows "Dropplink: track example_tap (queued, …)". */}
+        <Button
+          title="Track example_tap"
+          onPress={() =>
+            Dropplink.track('example_tap', { props: { screen: 'home' } })
+          }
+        />
       </ScrollView>
     </View>
   );

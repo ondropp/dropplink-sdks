@@ -1,11 +1,12 @@
 # Dropplink for Flutter
 
-`dropplink_flutter` attributes installs to the Dropplink link, channel and creator that brought them, and
-delivers deep links: the deferred one after a fresh install, and App Link / Universal Link opens.
+`dropplink_flutter` attributes installs to the Dropplink link, channel and creator that brought them,
+delivers deep links (the deferred one after a fresh install, and App Link / Universal Link opens), and
+records in-app events and the signed-in user.
 
 It is a thin bridge over the native SDKs ([`app.ondropp:dropplink-android`](../android) and the
 [`Dropplink`](../ios) pod). Install ids, the Play Install Referrer, request signing, storage, retries and
-pending-link buffering all happen natively; the Dart code only forwards calls and converts results.
+pending-link buffering and the event queue all happen natively; the Dart code only forwards calls and converts results.
 Behaviour is defined in [docs/sdk-spec.md](../docs/sdk-spec.md).
 
 Flutter 3.38+, Android 5.0 (API 21)+, iOS 13+. Full guide: https://docs.ondropp.app/sdk/flutter
@@ -109,6 +110,34 @@ If you already receive links through a package like `app_links`, turn off the pl
 <false/>
 ```
 
+## Events, revenue and users
+
+```dart
+// Funnel events. Names are snake_case; props are String, num, bool or null (up to 20).
+Dropplink.track('add_to_cart', props: {'sku': 'A1', 'qty': 2});
+
+// After sign-up or login. Pass your own opaque id; email / phone are optional and hashed on the device.
+Dropplink.identify(user.id, email: user.email);
+
+// On logout. Later events carry no user.
+Dropplink.logout();
+
+// Consent: false clears queued events and stops tracking until set back to true. Persisted.
+Dropplink.setTrackingEnabled(userConsented);
+final enabled = await Dropplink.isTrackingEnabled();
+```
+
+Events are queued on disk by the native SDK and sent in the background, so these calls never throw and
+don't need to be awaited. Calling `identify` with the same id again is a no-op, so it's fine on every launch.
+Invalid events are dropped with a log in debug mode (see [sdk-spec.md §11](../docs/sdk-spec.md#11-events-revenue-and-users)).
+
+**Revenue.** Send purchases that pay creators from your server, through `/v1/s2s/events`, so they can't be
+forged from a device. Revenue sent from the app is shown in the dashboard as **app-reported**:
+
+```dart
+Dropplink.track('purchase', revenue: const Revenue(amount: 1299.0, currency: 'INR', orderId: 'ord_123'));
+```
+
 ## API
 
 ```dart
@@ -118,12 +147,17 @@ abstract final class Dropplink {
   static Future<void> handleDeepLink(String url);
   static Future<DropplinkAttribution?> getAttribution(); // null before the first successful init
   static Future<String?> getInstallId();
+  static Future<void> track(String name, {Map<String, Object?>? props, Revenue? revenue});
+  static Future<void> identify(String userId, {String? email, String? phone});
+  static Future<void> logout();
+  static Future<void> setTrackingEnabled(bool enabled);
+  static Future<bool> isTrackingEnabled();
 }
 ```
 
 `DropplinkDeepLink` has `path`, `params`, `url` (null for the deferred link) and `isDeferred`.
 `DropplinkAttribution` has `type`, `method`, `clickId`, `linkId`, `campaignId`, `creatorId`, `source`,
-`confidence`, `attributedAt` and `isAttributed`. `baseUrl` is only for local testing, e.g.
+`confidence`, `attributedAt` and `isAttributed`. `Revenue` has `amount`, `currency` (ISO 4217) and `orderId`. `baseUrl` is only for local testing, e.g.
 `http://10.0.2.2:4100` from the Android emulator.
 
 ## Test your integration

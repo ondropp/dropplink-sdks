@@ -1,5 +1,5 @@
 group = "app.ondropp.dropplink.flutter"
-version = "0.1.0"
+version = "0.2.0"
 
 buildscript {
     val kotlinVersion = "2.2.20"
@@ -55,5 +55,5 @@ android {
 dependencies {
     // All logic lives in the native SDK. Inside the dropplink-sdks repo the example app swaps this for
     // ../android built from source (see example/android/settings.gradle.kts).
-    implementation("app.ondropp:dropplink-android:0.1.0")
+    implementation("app.ondropp:dropplink-android:0.2.0")
 }

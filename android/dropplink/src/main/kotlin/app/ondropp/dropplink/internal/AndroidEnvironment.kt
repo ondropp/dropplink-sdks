@@ -1,9 +1,12 @@
 package app.ondropp.dropplink.internal
 
+import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import java.io.File
@@ -48,6 +51,33 @@ internal class AndroidEnvironment(
 }
 
 internal fun storageFile(context: Context): File = File(context.noBackupFilesDir, "dropplink.json")
+
+internal fun queueFile(context: Context): File = File(context.noBackupFilesDir, "dropplink-queue.json")
+
+/**
+ * Calls [onBackground] when the last started activity stops, i.e. the app went to the background.
+ * Counts started activities itself so the SDK needs no androidx.lifecycle dependency. A configuration
+ * change (rotation) stops and restarts an activity, so it isn't counted as going to the background.
+ * Callbacks arrive on the main thread.
+ */
+internal class AppBackgroundWatcher(private val onBackground: () -> Unit) : Application.ActivityLifecycleCallbacks {
+    private var started = 0
+
+    override fun onActivityStarted(activity: Activity) {
+        started++
+    }
+
+    override fun onActivityStopped(activity: Activity) {
+        if (started > 0) started--
+        if (started == 0 && !activity.isChangingConfigurations) onBackground()
+    }
+
+    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+    override fun onActivityResumed(activity: Activity) = Unit
+    override fun onActivityPaused(activity: Activity) = Unit
+    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+    override fun onActivityDestroyed(activity: Activity) = Unit
+}
 
 internal fun isDebuggable(context: Context): Boolean =
     (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0

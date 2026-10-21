@@ -4,8 +4,8 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'dropplink_flutter'
-  s.version          = '0.1.0'
-  s.summary          = 'Dropplink install attribution and deep linking for Flutter.'
+  s.version          = '0.2.0'
+  s.summary          = 'Dropplink install attribution, deep linking and in-app events for Flutter.'
   s.description      = <<-DESC
 Flutter plugin for Dropplink. A thin bridge: all logic lives in the native Dropplink iOS SDK.
                        DESC
@@ -15,7 +15,7 @@ Flutter plugin for Dropplink. A thin bridge: all logic lives in the native Dropp
   s.source           = { :path => '.' }
   s.source_files     = 'Classes/**/*'
   s.dependency 'Flutter'
-  s.dependency 'Dropplink', '0.1.0'
+  s.dependency 'Dropplink', '0.2.0'
   s.platform         = :ios, '13.0'
 
   # Flutter.framework does not contain an i386 slice.

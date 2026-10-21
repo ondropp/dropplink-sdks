@@ -4,12 +4,14 @@ import app.ondropp.dropplink.DeepLink
 import app.ondropp.dropplink.DeepLinkListener
 import app.ondropp.dropplink.Dropplink
 import app.ondropp.dropplink.DropplinkConfig
+import app.ondropp.dropplink.Revenue
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.bridge.ReadableType
 import com.facebook.react.modules.core.DeviceEventManagerModule
 
 /**
@@ -68,6 +70,33 @@ class RNDropplinkModule(reactContext: ReactApplicationContext) :
         Dropplink.setDeepLinkListener(if (enabled) DeepLinkListener { emitDeepLink(it) } else null)
     }
 
+    // Events and users (sdk-spec section 11). The SDK validates, queues and sends; it never throws.
+
+    @ReactMethod
+    fun track(name: String, props: ReadableMap?, revenue: ReadableMap?) {
+        Dropplink.track(name, props?.toProps(), revenue?.toRevenue())
+    }
+
+    @ReactMethod
+    fun identify(userId: String, email: String?, phone: String?) {
+        Dropplink.identify(userId, email, phone)
+    }
+
+    @ReactMethod
+    fun logout() {
+        Dropplink.logout()
+    }
+
+    @ReactMethod
+    fun setTrackingEnabled(enabled: Boolean) {
+        Dropplink.setTrackingEnabled(enabled)
+    }
+
+    @ReactMethod
+    fun isTrackingEnabled(promise: Promise) {
+        promise.resolve(Dropplink.isTrackingEnabled())
+    }
+
     // Required by NativeEventEmitter; subscription counting is done in JS.
     @ReactMethod
     fun addListener(@Suppress("UNUSED_PARAMETER") eventName: String) = Unit
@@ -90,6 +119,36 @@ class RNDropplinkModule(reactContext: ReactApplicationContext) :
 
     private fun ReadableMap.stringOrNull(key: String): String? =
         if (hasKey(key) && !isNull(key)) getString(key) else null
+
+    // Booleans stay Boolean and numbers Double, so the SDK sends `true`, not `1`. Lists and maps are
+    // passed on as-is so the SDK drops them with its own debug log.
+    private fun ReadableMap.toProps(): Map<String, Any?> {
+        val out = LinkedHashMap<String, Any?>()
+        val keys = keySetIterator()
+        while (keys.hasNextKey()) {
+            val key = keys.nextKey()
+            out[key] = when (getType(key)) {
+                ReadableType.Null -> null
+                ReadableType.Boolean -> getBoolean(key)
+                ReadableType.Number -> getDouble(key)
+                ReadableType.String -> getString(key)
+                ReadableType.Map -> getMap(key)?.toHashMap()
+                ReadableType.Array -> getArray(key)?.toArrayList()
+            }
+        }
+        return out
+    }
+
+    // A missing or mistyped amount / currency becomes NaN / "", which the SDK rejects (dropping the
+    // event with a debug log), so validation stays in one place.
+    private fun ReadableMap.toRevenue(): Revenue = Revenue(
+        amount = if (isType("amount", ReadableType.Number)) getDouble("amount") else Double.NaN,
+        currency = if (isType("currency", ReadableType.String)) getString("currency").orEmpty() else "",
+        orderId = if (isType("orderId", ReadableType.String)) getString("orderId") else null,
+    )
+
+    private fun ReadableMap.isType(key: String, type: ReadableType): Boolean =
+        hasKey(key) && getType(key) == type
 
     companion object {
         const val NAME = "RNDropplink"

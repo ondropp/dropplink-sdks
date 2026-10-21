@@ -5,3 +5,4 @@
 -keep class app.ondropp.dropplink.DeepLink { public *; }
 -keep class app.ondropp.dropplink.Attribution { public *; }
 -keep interface app.ondropp.dropplink.DeepLinkListener { *; }
+-keep class app.ondropp.dropplink.Revenue { public *; }

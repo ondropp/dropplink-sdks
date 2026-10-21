@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "app.ondropp"
-version = "0.1.0" // Keep in sync with Dropplink.VERSION.
+version = "0.2.0" // Keep in sync with Dropplink.VERSION.
 
 android {
     namespace = "app.ondropp.dropplink"

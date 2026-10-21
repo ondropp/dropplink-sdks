@@ -86,6 +86,71 @@ final class RNDropplink: RCTEventEmitter {
         }
     }
 
+    // Events and users (sdk-spec section 11). The SDK validates, queues and sends; it never throws.
+
+    @objc(track:props:revenue:)
+    func track(_ name: String, props: NSDictionary?, revenue: NSDictionary?) {
+        Dropplink.track(
+            name, props: props.map(Self.props(from:)), revenue: revenue.map(Self.revenue(from:)))
+    }
+
+    @objc(identify:email:phone:)
+    func identify(_ userId: String, email: String?, phone: String?) {
+        Dropplink.identify(userId: userId, email: email, phone: phone)
+    }
+
+    @objc func logout() {
+        Dropplink.logout()
+    }
+
+    @objc(setTrackingEnabled:)
+    func setTrackingEnabled(_ enabled: Bool) {
+        Dropplink.setTrackingEnabled(enabled)
+    }
+
+    @objc(isTrackingEnabled:rejecter:)
+    func isTrackingEnabled(
+        _ resolve: @escaping RCTPromiseResolveBlock,
+        rejecter reject: @escaping RCTPromiseRejectBlock
+    ) {
+        resolve(Dropplink.isTrackingEnabled)
+    }
+
+    /// JS booleans and numbers both arrive as `NSNumber`; only the `CFBoolean` singletons are
+    /// booleans, so the SDK sends `true` rather than `1`. `NSNull` stays (a null prop), and arrays /
+    /// dictionaries are passed on so the SDK drops them with its own debug log.
+    private static func props(from dict: NSDictionary) -> [String: Any] {
+        var out: [String: Any] = [:]
+        for (key, value) in dict {
+            guard let key = key as? String else { continue }
+            if let number = value as? NSNumber, isBoolean(number) {
+                out[key] = number.boolValue
+            } else if let number = value as? NSNumber {
+                out[key] = number.doubleValue
+            } else {
+                out[key] = value
+            }
+        }
+        return out
+    }
+
+    /// A missing or mistyped amount / currency becomes NaN / "", which the SDK rejects (dropping the
+    /// event with a debug log), so validation stays in one place.
+    private static func revenue(from dict: NSDictionary) -> Revenue {
+        var amount = Double.nan
+        if let number = dict["amount"] as? NSNumber, !isBoolean(number) {
+            amount = number.doubleValue
+        }
+        return Revenue(
+            amount: amount,
+            currency: dict["currency"] as? String ?? "",
+            orderId: dict["orderId"] as? String)
+    }
+
+    private static func isBoolean(_ number: NSNumber) -> Bool {
+        CFGetTypeID(number) == CFBooleanGetTypeID()
+    }
+
     override func invalidate() {
         // JS context is going away (reload/teardown): let the SDK buffer links again.
         Dropplink.setDeepLinkListener(nil)

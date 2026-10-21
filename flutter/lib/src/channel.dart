@@ -71,4 +71,42 @@ class DropplinkChannel {
   Future<String?> getInstallId() {
     return _methods.invokeMethod<String>('getInstallId');
   }
+
+  /// Calls the native `track`. Null [props] and [revenue] are left out.
+  Future<void> track(
+    String name, {
+    Map<String, Object?>? props,
+    Revenue? revenue,
+  }) {
+    return _methods.invokeMethod<void>('track', <String, Object?>{
+      'name': name,
+      'props': ?props,
+      'revenue': ?revenue?.toMap(),
+    });
+  }
+
+  /// Calls the native `identify`. Null [email] and [phone] are left out.
+  Future<void> identify(String userId, {String? email, String? phone}) {
+    return _methods.invokeMethod<void>('identify', <String, Object?>{
+      'userId': userId,
+      'email': ?email,
+      'phone': ?phone,
+    });
+  }
+
+  /// Calls the native `logout`.
+  Future<void> logout() => _methods.invokeMethod<void>('logout');
+
+  /// Calls the native `setTrackingEnabled`.
+  Future<void> setTrackingEnabled(bool enabled) {
+    return _methods.invokeMethod<void>('setTrackingEnabled', <String, Object?>{
+      'enabled': enabled,
+    });
+  }
+
+  /// Calls the native `isTrackingEnabled`. `null` (no answer) reads as the
+  /// native default, `true`.
+  Future<bool> isTrackingEnabled() async {
+    return await _methods.invokeMethod<bool>('isTrackingEnabled') ?? true;
+  }
 }

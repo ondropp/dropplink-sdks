@@ -1,0 +1,26 @@
+{
+  "events": [
+    {
+      "eventId": "order-A1099",
+      "userId": "user_8812",
+      "name": "subscription_renewed",
+      "ts": 1760700300,
+      "revenue": {
+        "amount": 199,
+        "currency": "INR",
+        "orderId": "A1099"
+      }
+    },
+    {
+      "eventId": "refund-A1023",
+      "userId": "user_8812",
+      "name": "refund",
+      "ts": 1760700400,
+      "revenue": {
+        "amount": -499,
+        "currency": "INR",
+        "orderId": "A1023"
+      }
+    }
+  ]
+}

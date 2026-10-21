@@ -8,6 +8,18 @@ struct APIClient: Sendable {
         case failed(disable: Bool)
     }
 
+    /// One attempt, unretried, for callers with their own rules (the event queue, spec §11).
+    struct Attempt {
+        /// `nil` for a transport error (offline, timeout, TLS).
+        let statusCode: Int?
+        let body: Data
+        let retryAfter: TimeInterval?
+        let serverError: ServerError?
+        let transportError: Error?
+
+        var isSuccess: Bool { statusCode.map { (200..<300).contains($0) } ?? false }
+    }
+
     let config: DropplinkConfig
     let http: HTTPClient
     let retryPolicy: RetryPolicy
@@ -27,13 +39,12 @@ struct APIClient: Sendable {
     func post(_ path: String, body: Data) async -> Result {
         var retry = 0
         while true {
-            let (statusCode, response, transportError) = await attempt(path, body: body)
-            if let statusCode, (200..<300).contains(statusCode) {
-                return .success(response)
+            let result = await attempt(path, body: body)
+            if result.isSuccess {
+                return .success(result.body)
             }
-            let serverError = statusCode == nil ? nil : ServerError(data: response)
-            let decision = RetryPolicy.decide(statusCode: statusCode, errorCode: serverError?.code)
-            logFailure(path, statusCode: statusCode, serverError: serverError, transportError: transportError)
+            let decision = RetryPolicy.decide(statusCode: result.statusCode, errorCode: result.serverError?.code)
+            logFailure(path, result)
 
             switch decision {
             case .disable:
@@ -51,7 +62,14 @@ struct APIClient: Sendable {
         }
     }
 
-    private func attempt(_ path: String, body: Data) async -> (Int?, Data, Error?) {
+    /// Sends once and logs a failure the same way `post` does.
+    func send(_ path: String, body: Data) async -> Attempt {
+        let result = await attempt(path, body: body)
+        if !result.isSuccess { logFailure(path, result) }
+        return result
+    }
+
+    private func attempt(_ path: String, body: Data) async -> Attempt {
         // Timestamp per attempt (not per request): a retry after backoff must still be fresh.
         let timestamp = String(Int64(now().timeIntervalSince1970))
         var request = URLRequest(url: config.baseURL.appendingPathComponent(path))
@@ -64,17 +82,20 @@ struct APIClient: Sendable {
                          forHTTPHeaderField: "X-Signature")
         do {
             let response = try await http.send(request)
-            return (response.statusCode, response.body, nil)
+            let failed = !(200..<300).contains(response.statusCode)
+            return Attempt(statusCode: response.statusCode, body: response.body, retryAfter: response.retryAfter,
+                           serverError: failed ? ServerError(data: response.body) : nil, transportError: nil)
         } catch {
-            return (nil, Data(), error)
+            return Attempt(statusCode: nil, body: Data(), retryAfter: nil, serverError: nil, transportError: error)
         }
     }
 
-    private func logFailure(_ path: String, statusCode: Int?, serverError: ServerError?, transportError: Error?) {
-        guard let statusCode else {
-            log.error("\(path) network error: \(transportError?.localizedDescription ?? "unknown")")
+    private func logFailure(_ path: String, _ attempt: Attempt) {
+        guard let statusCode = attempt.statusCode else {
+            log.error("\(path) network error: \(attempt.transportError?.localizedDescription ?? "unknown")")
             return
         }
+        let serverError = attempt.serverError
         let code = serverError?.code ?? "unknown"
         switch (statusCode, code) {
         case (401, "stale_timestamp"):

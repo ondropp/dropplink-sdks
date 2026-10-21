@@ -1,6 +1,9 @@
 package app.ondropp.dropplink.internal
 
+import org.json.JSONArray
 import org.json.JSONObject
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.Executor
@@ -15,6 +18,33 @@ internal object Contract {
     fun text(relativePath: String): String = File(dir, relativePath).readText(Charsets.UTF_8)
 
     fun json(relativePath: String): JSONObject = JSONObject(text(relativePath))
+
+    /** File names in a fixture folder, sorted. */
+    fun list(relativeDir: String): List<String> =
+        File(dir, relativeDir).listFiles()?.map { it.name }?.sorted().orEmpty()
+}
+
+/** Same keys everywhere, same values; numbers compared by value (2.625 may parse as Double or BigDecimal). */
+internal fun assertSameJson(path: String, expected: Any, actual: Any) {
+    when (expected) {
+        is JSONObject -> {
+            assertTrue("$path is not an object", actual is JSONObject)
+            actual as JSONObject
+            assertEquals("keys at '$path'", expected.keys().asSequence().toSet(), actual.keys().asSequence().toSet())
+            for (key in expected.keys()) assertSameJson("$path/$key", expected.get(key), actual.get(key))
+        }
+        is JSONArray -> {
+            assertTrue("$path is not an array", actual is JSONArray)
+            actual as JSONArray
+            assertEquals("length of '$path'", expected.length(), actual.length())
+            for (i in 0 until expected.length()) assertSameJson("$path[$i]", expected.get(i), actual.get(i))
+        }
+        is Number -> {
+            assertTrue("$path is not a number", actual is Number)
+            assertEquals(path, expected.toDouble(), (actual as Number).toDouble(), 0.0)
+        }
+        else -> assertEquals(path, expected, actual)
+    }
 }
 
 /** Runs tasks only when asked, so tests control ordering. */
@@ -41,16 +71,40 @@ internal class RecordedRequest(val url: String, val headers: Map<String, String>
 
 /** Replies with scripted responses in order; `null` in the script means a network error. */
 internal class FakeHttpClient(vararg script: Pair<Int, String>?) : HttpClient {
-    private val script = ArrayDeque(script.toList())
+    private val script = ArrayDeque(script.map { it?.let { (status, body) -> HttpResponse(status, body) } })
     val requests = mutableListOf<RecordedRequest>()
 
-    fun enqueue(status: Int, body: String) = script.addLast(status to body)
+    fun enqueue(status: Int, body: String, headers: Map<String, String> = emptyMap()) =
+        script.addLast(HttpResponse(status, body, headers))
+
+    fun enqueueNetworkError() = script.addLast(null)
 
     override fun post(url: String, headers: Map<String, String>, body: ByteArray): HttpResponse {
         requests += RecordedRequest(url, headers, body)
         check(script.isNotEmpty()) { "Unexpected request to $url" }
-        val next = script.removeFirst() ?: throw IOException("connection reset")
-        return HttpResponse(next.first, next.second)
+        return script.removeFirst() ?: throw IOException("connection reset")
+    }
+}
+
+/** A [Scheduler] on a virtual clock: tasks run only when the test calls [advance]. */
+internal class FakeScheduler {
+    var nowMs = 0L
+        private set
+    private val tasks = mutableListOf<Pair<Long, Runnable>>()
+    val scheduler = Scheduler { delayMs, task -> tasks += (nowMs + delayMs) to task }
+
+    /** Delays of everything scheduled so far that hasn't run yet. */
+    val pendingDelays: List<Long> get() = tasks.map { it.first - nowMs }
+
+    fun advance(ms: Long) {
+        val until = nowMs + ms
+        while (true) {
+            val next = tasks.filter { it.first <= until }.minByOrNull { it.first } ?: break
+            tasks.remove(next)
+            nowMs = next.first
+            next.second.run()
+        }
+        nowMs = until
     }
 }
 

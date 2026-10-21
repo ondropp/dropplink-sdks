@@ -1,13 +1,15 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import 'channel.dart';
 import 'models.dart';
 
-/// Dropplink install attribution and deep linking for Flutter apps.
+/// Dropplink install attribution, deep linking and in-app events for Flutter
+/// apps.
 ///
 /// A thin bridge to the native Dropplink SDKs for Android and iOS, which do
-/// all the work (signing, storage, retries). Every call here forwards to the
-/// native SDK.
+/// all the work (signing, storage, the event queue, retries). Every call here
+/// forwards to the native SDK.
 ///
 /// ```dart
 /// Future<void> main() async {
@@ -80,4 +82,71 @@ abstract final class Dropplink {
   /// This install's id, for the dashboard's Install debugger. May be `null`
   /// very early, before the native SDK has loaded or created it.
   static Future<String?> getInstallId() => _channel.getInstallId();
+
+  /// Records an in-app event, e.g. `track('add_to_cart', props: {'sku': 'A1'})`.
+  ///
+  /// The native SDK checks the event, writes it to its on-disk queue and
+  /// sends it in the background, so this returns quickly and never throws.
+  /// [name] must be snake_case (`^[a-z][a-z0-9_]{0,63}$`), or the event is
+  /// dropped. Up to 20 [props], with String, num, bool or null values; other
+  /// values, and values that look like an email or phone number, are dropped.
+  ///
+  /// [revenue] is shown as app-reported. Send purchases that pay creators
+  /// from your server (`/v1/s2s/events`) and use `track` for the funnel.
+  static Future<void> track(
+    String name, {
+    Map<String, Object?>? props,
+    Revenue? revenue,
+  }) => _quietly(() => _channel.track(name, props: props, revenue: revenue));
+
+  /// Links your own user id to this install. Call it when the user signs up
+  /// or logs in; calling it again with the same id is a no-op, so calling it
+  /// on every launch is fine.
+  ///
+  /// Pass an opaque id, not an email or phone number. [email] and [phone]
+  /// (E.164, e.g. `+919812345678`) are optional and hashed on the device
+  /// before they leave it.
+  static Future<void> identify(String userId, {String? email, String? phone}) =>
+      _quietly(() => _channel.identify(userId, email: email, phone: phone));
+
+  /// Unlinks the user, e.g. when they log out. Events after it carry no user.
+  static Future<void> logout() => _quietly(_channel.logout);
+
+  /// `false` clears the queued events and stops [track], [identify] and
+  /// [logout], until it is set back to `true`. Persisted across launches by
+  /// the native SDK, so it can hold the user's consent choice. Install
+  /// attribution and deep links keep working. Default `true`.
+  static Future<void> setTrackingEnabled(bool enabled) =>
+      _quietly(() => _channel.setTrackingEnabled(enabled));
+
+  /// The current [setTrackingEnabled] setting. `false` if the native SDK
+  /// can't be reached, since nothing is tracked then (as in React Native).
+  static Future<bool> isTrackingEnabled() async {
+    try {
+      return await _channel.isTrackingEnabled();
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
+  // Event and user calls never throw (spec section 2): the native SDK logs
+  // its own failures in debug mode, and an analytics call must not take the
+  // app down with it.
+  static Future<void> _quietly(Future<void> Function() call) async {
+    try {
+      await call();
+    } on PlatformException {
+      // Swallowed, see above.
+    } on MissingPluginException {
+      // No native plugin, e.g. an unsupported platform or a widget test.
+    } on ArgumentError catch (error) {
+      // A prop value the platform channel can't encode, e.g. a DateTime.
+      assert(() {
+        debugPrint('Dropplink: call dropped: $error');
+        return true;
+      }());
+    }
+  }
 }

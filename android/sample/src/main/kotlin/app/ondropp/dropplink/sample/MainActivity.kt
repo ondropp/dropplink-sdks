@@ -21,6 +21,10 @@ class MainActivity : Activity() {
 
         // 3. Report the App Link the app was opened with.
         intent?.data?.let { Dropplink.handleDeepLink(it) }
+
+        // 4. In-app events: queued on disk and sent in the background. A real app also calls
+        //    Dropplink.identify(user.id) after login and Dropplink.logout() on logout.
+        Dropplink.track("screen_view", mapOf("screen" to "main"))
     }
 
     override fun onNewIntent(intent: Intent) {

@@ -5,6 +5,9 @@ import type {
   DeepLink,
   DeepLinkListener,
   DropplinkConfig,
+  EventProps,
+  IdentifyTraits,
+  Revenue,
   Subscription,
 } from './types';
 
@@ -17,6 +20,20 @@ const LINKING_ERROR =
 function native(): Spec {
   if (!NativeDropplink) throw new Error(LINKING_ERROR);
   return NativeDropplink;
+}
+
+// Events and users must never throw into the host app (docs/sdk-spec.md section 2), not even when
+// the module isn't linked: warn once in development and drop the call.
+let warnedUnavailable = false;
+function safely(call: (module: Spec) => void): void {
+  try {
+    call(native());
+  } catch (e) {
+    if (!warnedUnavailable && typeof __DEV__ !== 'undefined' && __DEV__) {
+      warnedUnavailable = true;
+      console.warn('Dropplink:', e instanceof Error ? e.message : e);
+    }
+  }
 }
 
 let emitter: NativeEventEmitter | undefined;
@@ -120,5 +137,66 @@ export const Dropplink = {
     }
     const sub = Linking.addEventListener('url', ({ url }) => forward(url));
     return () => sub.remove();
+  },
+
+  /**
+   * Records an in-app event, e.g. `track('add_to_cart', { props: { sku: 'A1' } })`. The native SDK
+   * validates it (invalid events are dropped with a debug log), queues it on disk and sends it in
+   * the background. Never throws.
+   */
+  track(
+    name: string,
+    options?: { props?: EventProps; revenue?: Revenue }
+  ): void {
+    const revenue = options?.revenue;
+    safely((m) =>
+      m.track(
+        name,
+        options?.props ?? null,
+        revenue
+          ? {
+              amount: revenue.amount,
+              currency: revenue.currency,
+              orderId: revenue.orderId ?? null,
+            }
+          : null
+      )
+    );
+  },
+
+  /**
+   * Links the brand's own user id to this install. Call after sign-up / login; calling again with
+   * the same id is a no-op natively, so calling it on every launch is fine. `email` and `phone`
+   * are hashed on the device. Never throws.
+   */
+  identify(userId: string, traits?: IdentifyTraits): void {
+    safely((m) =>
+      m.identify(userId, traits?.email ?? null, traits?.phone ?? null)
+    );
+  },
+
+  /** Unlinks the user; later events carry no user. Never throws. */
+  logout(): void {
+    safely((m) => m.logout());
+  },
+
+  /**
+   * `false` clears the native event queue and stops events and identify until set back to `true`
+   * (for consent). Persisted natively across launches. Attribution and deep links keep working.
+   */
+  setTrackingEnabled(enabled: boolean): void {
+    safely((m) => m.setTrackingEnabled(enabled));
+  },
+
+  /**
+   * The current setting (default `true`). Resolves `false` if the native module isn't linked or
+   * fails, since nothing is tracked then. Never rejects.
+   */
+  async isTrackingEnabled(): Promise<boolean> {
+    try {
+      return (await native().isTrackingEnabled()) === true;
+    } catch {
+      return false;
+    }
   },
 };

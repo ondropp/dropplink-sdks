@@ -52,9 +52,9 @@ class InitBodyTest {
 
     @Test
     fun sdkVersionCarriesTheWrapperSuffix() {
-        assertEquals("0.1.0", sdkVersionFor(null))
-        assertEquals("0.1.0-flutter", sdkVersionFor("flutter"))
-        assertEquals("0.1.0-rn", sdkVersionFor("rn"))
+        assertEquals("0.2.0", sdkVersionFor(null))
+        assertEquals("0.2.0-flutter", sdkVersionFor("flutter"))
+        assertEquals("0.2.0-rn", sdkVersionFor("rn"))
     }
 
     @Test
@@ -71,26 +71,5 @@ class InitBodyTest {
         val referrer = InstallReferrer.fromRaw("utm_source=google-play", 0, 0)
         val json = build(referrer = referrer).getJSONObject("installReferrer")
         assertEquals(setOf("raw"), json.keys().asSequence().toSet())
-    }
-
-    /** Same keys everywhere, same values; numbers compared by value (2.625 may parse as Double or BigDecimal). */
-    private fun assertSameJson(path: String, expected: JSONObject, actual: JSONObject) {
-        assertEquals("keys at '$path'", expected.keys().asSequence().toSet(), actual.keys().asSequence().toSet())
-        for (key in expected.keys()) {
-            val e = expected.get(key)
-            val a = actual.get(key)
-            val at = "$path/$key"
-            when (e) {
-                is JSONObject -> {
-                    assertTrue("$at is not an object", a is JSONObject)
-                    assertSameJson(at, e, a as JSONObject)
-                }
-                is Number -> {
-                    assertTrue("$at is not a number", a is Number)
-                    assertEquals(at, e.toDouble(), (a as Number).toDouble(), 0.0)
-                }
-                else -> assertEquals(at, e, a)
-            }
-        }
     }
 }

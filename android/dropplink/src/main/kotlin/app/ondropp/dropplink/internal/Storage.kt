@@ -17,6 +17,8 @@ internal class Storage(private val file: File) {
         val installId: String? = null,
         val attributed: Boolean = false,
         val attribution: Attribution? = null,
+        /** `false` after `setTrackingEnabled(false)`; absent in the file means `true`. */
+        val trackingEnabled: Boolean = true,
     )
 
     /** An unreadable or corrupt file reads as empty, which means a fresh install id. */
@@ -28,26 +30,22 @@ internal class Storage(private val file: File) {
                 installId = json.stringOrNull("installId"),
                 attributed = json.optBoolean("attributed", false),
                 attribution = json.optJSONObject("attribution")?.let { Responses.parseAttribution(it) },
+                trackingEnabled = json.optBoolean("trackingEnabled", true),
             )
         } catch (e: Exception) {
             State()
         }
     }
 
+    // Synchronized: init (network thread) and setTrackingEnabled (I/O thread) both write.
+    @Synchronized
     @Throws(IOException::class)
     fun write(state: State) {
         val json = JSONObject()
         state.installId?.let { json.put("installId", it) }
         json.put("attributed", state.attributed)
         state.attribution?.let { json.put("attribution", it.toJson()) }
-
-        // Write to a temp file and rename over the old one, so a crash mid-write never leaves a half file.
-        file.parentFile?.mkdirs()
-        val tmp = File(file.parentFile, "${file.name}.tmp")
-        tmp.writeText(json.toString(), Charsets.UTF_8)
-        if (!tmp.renameTo(file)) {
-            file.delete()
-            if (!tmp.renameTo(file)) throw IOException("Could not write ${file.name}")
-        }
+        if (!state.trackingEnabled) json.put("trackingEnabled", false)
+        writeAtomically(file, json.toString())
     }
 }

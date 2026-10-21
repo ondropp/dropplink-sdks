@@ -22,6 +22,19 @@ export interface Spec extends TurboModule {
    */
   setDeepLinkListenerEnabled(enabled: boolean): void;
 
+  // Events and users (docs/sdk-spec.md section 11). Fire-and-forget: the native SDK validates,
+  // queues and sends. `null` stands for an omitted optional argument.
+  /** `props` values keep their JS type (string, number, boolean, null); native drops the rest. */
+  track(
+    name: string,
+    props: Object | null,
+    revenue: { amount: number; currency: string; orderId: string | null } | null
+  ): void;
+  identify(userId: string, email: string | null, phone: string | null): void;
+  logout(): void;
+  setTrackingEnabled(enabled: boolean): void;
+  isTrackingEnabled(): Promise<boolean>;
+
   // Required by NativeEventEmitter.
   addListener(eventName: string): void;
   removeListeners(count: number): void;

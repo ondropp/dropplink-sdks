@@ -1,6 +1,6 @@
 import Foundation
 
-/// Spec §6. Persists the install id, the `attributed` flag and the last attribution in
+/// Spec §6. Persists the install id, the `attributed` flag, the last attribution and `trackingEnabled` in
 /// `UserDefaults(suiteName: "app.ondropp.dropplink")`, apart from the app's own defaults.
 /// The secret is never stored.
 final class Storage: @unchecked Sendable {
@@ -12,6 +12,7 @@ final class Storage: @unchecked Sendable {
         static let installId = "installId"
         static let attributed = "attributed"
         static let attribution = "attribution"
+        static let trackingEnabled = "trackingEnabled"
     }
 
     private let defaults: UserDefaults
@@ -38,6 +39,12 @@ final class Storage: @unchecked Sendable {
     var attributed: Bool {
         get { defaults.bool(forKey: Key.attributed) }
         set { defaults.set(newValue, forKey: Key.attributed) }
+    }
+
+    /// Spec §11 consent switch. Absent means `true`.
+    var trackingEnabled: Bool {
+        get { defaults.object(forKey: Key.trackingEnabled) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: Key.trackingEnabled) }
     }
 
     var attribution: Attribution? {

@@ -6,12 +6,15 @@ Install attribution and deep links for apps promoted with Dropp links:
   on the server).
 - Delivers the **deferred deep link** after a fresh install, so the first launch opens the right screen.
 - Resolves **App Link** opens of Dropp links into the same deep link format.
+- Records **in-app events** and links your **users** to the install, so the funnel after an install is
+  credited to the creator who drove it.
 
 minSdk 21, Kotlin and Java friendly. The only dependency is Google's Play Install Referrer library.
 Behaviour is specified in [docs/sdk-spec.md](../docs/sdk-spec.md), shared with the iOS, Flutter and React
 Native SDKs.
 
 - [Setup in 4 steps](#setup-in-4-steps)
+- [Events, revenue and users](#events-revenue-and-users)
 - [API](#api)
 - [Test your integration](#test-your-integration)
 - [Troubleshooting](#troubleshooting)
@@ -25,7 +28,7 @@ Native SDKs.
 ```kotlin
 // app/build.gradle.kts (mavenCentral() must be in your repositories)
 dependencies {
-    implementation("app.ondropp:dropplink-android:0.1.0")
+    implementation("app.ondropp:dropplink-android:0.2.0")
 }
 ```
 
@@ -145,20 +148,62 @@ are sent right after it.
 
 The [`sample/`](sample) app shows all four steps.
 
+## Events, revenue and users
+
+```kotlin
+// Funnel events: snake_case names, up to 20 non-personal props (strings, numbers, booleans, null).
+Dropplink.track("add_to_cart", mapOf("sku" to "TSHIRT-M", "qty" to 1))
+Dropplink.track("purchase", revenue = Revenue(499.0, "INR", orderId = "A1023"))
+
+// After sign-up / login: your own opaque user id. Email and phone are optional and hashed on the device.
+Dropplink.identify(user.id, email = user.email, phone = user.phoneE164)
+
+// On logout. Events after it carry no user.
+Dropplink.logout()
+
+// Consent: false clears anything waiting and stops events and identify, across launches, until set to
+// true. Install attribution and deep links keep working.
+Dropplink.setTrackingEnabled(userAccepted)
+```
+
+Java: `Dropplink.track("add_to_cart")`, `Dropplink.track("purchase", null, new Revenue(499.0, "INR"))`,
+`Dropplink.identify(userId)`.
+
+- Each call is checked, written to a queue file and returns; the SDK sends the queue in the background
+  (1 s after the last call, when the app goes to the background, and after each launch's init), in
+  batches, retrying until the server has it. Every event gets its id and timestamp when you call `track`,
+  so retries never double-count.
+- Invalid events are dropped with the reason logged in debug mode (`event "Add To Cart" dropped: name must
+  be snake_case`). Props that look like an email or phone number are dropped. Use ids, not personal data.
+- `identify` with the same user id as last time does nothing, so it's fine to call on every launch.
+- The queue holds up to 1,000 events (1 MB); when full, the oldest events without revenue go first. Events
+  older than 7 days are dropped.
+
+**Revenue from the app is shown as app-reported.** A client can be modified, so purchases that pay
+creators must be sent from your server with `POST /v1/s2s/events` (see the server's API docs). Use `track`
+for the funnel (views, add to cart, checkout started) and, if you like, the app-side view of a purchase.
+
 ## API
 
 Package `app.ondropp.dropplink`:
 
 ```kotlin
 object Dropplink {
-    const val VERSION = "0.1.0"
+    const val VERSION = "0.2.0"
     @JvmStatic fun initialize(context: Context, config: DropplinkConfig)
     @JvmStatic fun setDeepLinkListener(listener: DeepLinkListener?)
     @JvmStatic fun handleDeepLink(uri: Uri)
     @JvmStatic fun handleDeepLink(url: String)
     @JvmStatic fun getAttribution(): Attribution?   // null before the first successful init
     @JvmStatic fun getInstallId(): String?          // null before initialize
+    @JvmStatic @JvmOverloads fun track(name: String, props: Map<String, Any?>? = null, revenue: Revenue? = null)
+    @JvmStatic @JvmOverloads fun identify(userId: String, email: String? = null, phone: String? = null)
+    @JvmStatic fun logout()
+    @JvmStatic fun setTrackingEnabled(enabled: Boolean)
+    @JvmStatic fun isTrackingEnabled(): Boolean
 }
+
+data class Revenue @JvmOverloads constructor(val amount: Double, val currency: String, val orderId: String? = null)
 
 data class DropplinkConfig @JvmOverloads constructor(
     val keyId: String,
@@ -188,6 +233,8 @@ data class Attribution(
 All calls are thread-safe and never block on the network. None throws, except `initialize` with an invalid
 config in a debuggable build (so the mistake shows up during development; release builds log and disable
 the SDK instead). `getAttribution()` is cached on disk, so it's available immediately on later launches.
+`track`, `identify`, `logout` and `setTrackingEnabled` calls made before `initialize` are held and applied
+once it runs.
 
 ## Test your integration
 
@@ -227,6 +274,10 @@ With `debug = true`, failures are logged under the `Dropplink` tag with the serv
 | `Install Referrer not available` / `timed out` | No Play Store on the device, or a sideloaded install. Init is still sent; the server falls back to fingerprint. | Expected on emulators without Play and for `adb install`. |
 | `deeplink: not a Dropplink link` | `handleDeepLink` got a URL that isn't one of your app's links. | Expected for other URLs. |
 | `deeplink: no path for this link` | The link was opened but has no deep link path set. | Set a deep link path on the link in the dashboard. |
+| `event "…" dropped: …` / `prop … dropped` | The event broke a rule (name, props, revenue); see the reason. | Fix the call. |
+| `identify dropped: userId looks like an email or phone number` | `identify` was given personal data as the id. | Pass your own opaque user id. |
+| `events: 503 …; retrying in …` | The queue is kept and retried with backoff (1 s up to 5 min). | Nothing. |
+| `events: 401 …` `paused until the next launch` | Key or signature problem; events stay queued. | Fix the key; they're sent on the next launch. |
 
 No link delivered? Check the listener is set (it runs on the main thread), that the intent filter's host
 matches your link domain, that `onNewIntent` forwards to the SDK for `singleTask` / `singleTop` activities,
@@ -236,9 +287,12 @@ and that `assetlinks.json` lists your signing certificate.
 
 The SDK sends only: a random install id (created by the SDK, not an advertising or Android id), app and SDK
 version, device model, OS version, locale, time zone, screen size and, until attributed, the Play Install
-Referrer. No advertising id, no contacts, no location.
+Referrer. No advertising id, no contacts, no location. With events, it also sends what you pass to
+`track` and `identify`; emails and phone numbers given to `identify` are SHA-256 hashed on the device and
+never stored or sent in plain text.
 
-It stores the install id and last attribution in `dropplink.json` in `Context.noBackupFilesDir`. That folder
+It stores the install id, last attribution and the tracking setting in `dropplink.json`, and unsent events
+in `dropplink-queue.json`, both in `Context.noBackupFilesDir`. That folder
 is never included in Auto Backup, so a restored phone gets a new install id and you don't need to edit your
 backup rules. The secret is never stored by the SDK.
 
@@ -255,7 +309,8 @@ cd android
 `dropplink.keyId`, `dropplink.secret` and optionally `dropplink.baseUrl` from the same file.
 
 Tests reproduce every signing vector in `contract/hmac/vectors.json`, check the init body against
-`contract/init/request.android.json`, parse every response fixture, and cover the retry rules, storage and
+`contract/init/request.android.json` and the events / identify bodies against `contract/events` and
+`contract/identify`, parse every response fixture, and cover the retry rules, the event queue, storage and
 deep link delivery with a fake HTTP client, environment and executors. Android types are kept out of the core logic, so
 there's no Robolectric.
 
@@ -268,8 +323,9 @@ Layout of `dropplink/src/main/kotlin/app/ondropp/dropplink/`:
 
 | File | |
 | --- | --- |
-| `Dropplink.kt`, `DropplinkConfig.kt`, `DeepLink.kt`, `Attribution.kt` | Public API |
-| `internal/DropplinkCore.kt` | Lifecycle, init / deeplink requests, retries, state |
+| `Dropplink.kt`, `DropplinkConfig.kt`, `DeepLink.kt`, `Attribution.kt`, `Revenue.kt` | Public API |
+| `internal/DropplinkCore.kt` | Lifecycle, init / deeplink requests, retries, state, queue flushes |
+| `internal/EventQueue.kt`, `internal/EventValidation.kt`, `internal/Scheduler.kt` | Event queue file, caps and batches; `track` / `identify` checks and PII rules; timers |
 | `internal/Signer.kt`, `internal/HttpClient.kt`, `internal/RetryPolicy.kt` | Signed requests over `HttpURLConnection` |
 | `internal/InitBody.kt`, `internal/Responses.kt`, `internal/Json.kt` | `/v1/init` body and response parsing |
 | `internal/Environment.kt`, `internal/AndroidEnvironment.kt`, `internal/InstallReferrerReader.kt` | Device details and Install Referrer (the only Android-specific code) |

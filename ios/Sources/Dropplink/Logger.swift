@@ -39,8 +39,14 @@ struct Log: @unchecked Sendable {
 
     private func write(_ level: Level, _ message: String) {
         let line = "Dropplink: " + message
-        // `.default` rather than `.debug`/`.info` so messages show in Console without extra settings.
-        os_log("%{public}@", log: osLog, type: level == .error ? .error : .default, line)
+        if enabled {
+            // Debug mode: NSLog, because `flutter run`, React Native's Metro/Xcode consoles and Xcode all show
+            // it, while they filter os_log lines out. NSLog also lands in the unified log (Console.app).
+            NSLog("%@", line)
+        } else {
+            // `.default` rather than `.debug`/`.info` so messages show in Console without extra settings.
+            os_log("%{public}@", log: osLog, type: level == .error ? .error : .default, line)
+        }
         sink?(level, line)
     }
 }

@@ -1,8 +1,8 @@
 # Dropplink for React Native
 
 `@ondropp/dropplink-react-native` attributes installs to the Dropplink link, channel and creator that
-brought them, and delivers deep links: the deferred one after a fresh install, and App Link / Universal
-Link opens.
+brought them, delivers deep links (the deferred one after a fresh install, and App Link / Universal
+Link opens), and records in-app events and the signed-in user.
 
 It is a thin bridge over the native SDKs
 ([`app.ondropp:dropplink-android`](../android) and the [`Dropplink`](../ios) pod). Install ids, the Play
@@ -16,6 +16,7 @@ only forwards calls and converts results. Behaviour is defined in [docs/sdk-spec
 - [Deep links](#deep-links)
 - [App Links (Android)](#app-links-android)
 - [Universal Links (iOS)](#universal-links-ios)
+- [Events, revenue and users](#events-revenue-and-users)
 - [API](#api)
 - [Test your integration](#test-your-integration)
 - [Troubleshooting](#troubleshooting)
@@ -186,6 +187,34 @@ React Native's `Linking` already reads the intent's URL (launch and `onNewIntent
 Then `listenToLinking()` forwards them. Tap links from Notes or Messages to test; typing one into Safari's
 address bar doesn't open Universal Links.
 
+## Events, revenue and users
+
+```ts
+// Funnel events. Names are snake_case; up to 20 props of string, number, boolean or null.
+Dropplink.track('add_to_cart', { props: { sku: 'A1', qty: 2 } });
+Dropplink.track('purchase', { revenue: { amount: 499, currency: 'INR', orderId: 'ord_123' } });
+
+// After sign-up / login. Calling it again with the same id is a no-op, so every launch is fine.
+// Pass an opaque id, not an email. email / phone are optional and hashed on the device.
+Dropplink.identify(user.id, { email: user.email, phone: user.phone });
+
+// On logout. Later events carry no user.
+Dropplink.logout();
+
+// Consent: false clears queued events and stops events and identify, persisted across launches.
+// Install attribution and deep links keep working.
+Dropplink.setTrackingEnabled(userConsented);
+const enabled = await Dropplink.isTrackingEnabled();
+```
+
+These calls return immediately and never throw. The native SDK checks each event (invalid ones are dropped
+with a debug log), keeps a queue on disk and sends it in the background, after `/v1/init` and with
+retries.
+
+**Revenue:** revenue sent with `track` is shown in the dashboard as **app-reported**. Purchases that pay
+creators must come from your server: send them to `/v1/s2s/events` from your backend when the order is
+confirmed, and use `track` in the app for the funnel (views, add to cart, checkout started).
+
 ## API
 
 ```ts
@@ -197,6 +226,11 @@ Dropplink.handleDeepLink(url: string): Promise<void>
 Dropplink.getAttribution(): Promise<Attribution | null>   // null before the first successful init
 Dropplink.getInstallId(): Promise<string | null>          // null before initialize
 Dropplink.listenToLinking(): () => void                   // returns unsubscribe
+Dropplink.track(name: string, options?: { props?: EventProps; revenue?: Revenue }): void
+Dropplink.identify(userId: string, traits?: IdentifyTraits): void
+Dropplink.logout(): void
+Dropplink.setTrackingEnabled(enabled: boolean): void
+Dropplink.isTrackingEnabled(): Promise<boolean>           // false if the module isn't linked
 useDropplinkDeepLink(handler: (link: DeepLink) => void): void
 
 type DropplinkConfig = { keyId: string; secret: string; debug?: boolean; baseUrl?: string };
@@ -207,9 +241,14 @@ type Attribution = {
   clickId?: string; linkId?: string; campaignId?: string; creatorId?: string;
   source?: string; confidence?: number; attributedAt?: string;
 };
+type EventProps = Record<string, string | number | boolean | null>;
+type Revenue = { amount: number; currency: string; orderId?: string };
+type IdentifyTraits = { email?: string; phone?: string };
 ```
 
-Promises resolve once the native call has been handed off; they don't wait for the network. They reject
+Promises resolve once the native call has been handed off; they don't wait for the network. The event and
+user calls never throw (if the module isn't linked they do nothing and warn once in development). The other
+promises reject
 only if the native module isn't linked, or (`initialize`, Android) on invalid config in a debuggable
 build of the host app, so the mistake shows up during development; release builds log it and disable
 the SDK. Network and server errors never reach JS; they are logged natively when `debug` is on.
@@ -270,7 +309,7 @@ when the last one goes, so the native SDK keeps buffering links while nobody in 
 reload the native listener is cleared too.
 
 The native config is always created with `platformWrapper = "rn"`, so the server sees `sdkVersion`
-`0.1.0-rn`.
+`0.2.0-rn`.
 
 ## Development
 

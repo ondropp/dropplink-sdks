@@ -38,4 +38,12 @@ struct RetryPolicy: Sendable {
         let factor = 1 + jitter * (random * 2 - 1)
         return delays[retry] * factor
     }
+
+    /// Spec §11: the event queue's backoff before retry number `retry` (0-based): 1 s, 2 s, 4 s …
+    /// capped at 5 min, ± 20% jitter. Retries never run out; a longer `Retry-After` wins.
+    static func queueDelay(beforeRetry retry: Int, random: Double, retryAfter: TimeInterval?) -> TimeInterval {
+        let base = min(pow(2, Double(min(max(retry, 0), 16))), 300)
+        let delay = base * (1 + 0.2 * (random * 2 - 1))
+        return max(delay, retryAfter ?? 0)
+    }
 }

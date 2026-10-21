@@ -1,7 +1,8 @@
 # Dropplink example app
 
 A minimal SwiftUI app: initializes the SDK in `App.init`, forwards Universal Links, shows the install id,
-the attribution and the last deep link. Just the source files are checked in, so there's no Xcode project
+the attribution and the last deep link, and has buttons for `track`, `identify`, `logout` and
+`setTrackingEnabled`. Just the source files are checked in, so there's no Xcode project
 to keep in sync.
 
 ## Run it

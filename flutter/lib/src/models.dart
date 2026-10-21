@@ -166,3 +166,49 @@ class DropplinkAttribution {
       'linkId: $linkId, campaignId: $campaignId, creatorId: $creatorId, '
       'source: $source, confidence: $confidence, attributedAt: $attributedAt)';
 }
+
+/// Revenue attached to an event sent with `Dropplink.track`.
+///
+/// Shown in the dashboard as **app-reported**. Purchases that pay creators
+/// should be sent from your server (`/v1/s2s/events`) instead.
+@immutable
+class Revenue {
+  /// Creates a revenue amount, e.g. `Revenue(amount: 499.0, currency: 'INR')`.
+  ///
+  /// The native SDK checks it when the event is tracked: [amount] must be
+  /// finite and not negative (rounded to 2 decimals), [currency] an ISO 4217
+  /// code (trimmed and upper-cased), [orderId] at most 128 characters.
+  /// Otherwise the event is dropped, with a log in debug mode.
+  const Revenue({required this.amount, required this.currency, this.orderId});
+
+  /// The amount in [currency], e.g. `499.0`.
+  final double amount;
+
+  /// ISO 4217 currency code, e.g. `INR`.
+  final String currency;
+
+  /// Your order id, used by the server to de-duplicate purchases.
+  final String? orderId;
+
+  /// The map sent to the native SDK over the platform channel. A null
+  /// [orderId] is left out.
+  Map<String, Object?> toMap() => <String, Object?>{
+    'amount': amount,
+    'currency': currency,
+    'orderId': ?orderId,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      other is Revenue &&
+      other.amount == amount &&
+      other.currency == currency &&
+      other.orderId == orderId;
+
+  @override
+  int get hashCode => Object.hash(amount, currency, orderId);
+
+  @override
+  String toString() =>
+      'Revenue(amount: $amount, currency: $currency, orderId: $orderId)';
+}

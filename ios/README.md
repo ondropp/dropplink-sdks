@@ -5,6 +5,8 @@ Install attribution and deep links for apps promoted with Dropp links:
 - Attributes each install to the Dropp link that drove it.
 - Delivers the **deferred deep link** after a fresh install, so the first launch opens the right screen.
 - Resolves **Universal Link** opens of Dropp links into the same deep link format.
+- Sends **in-app events** and links your **users** to their install, through an on-disk queue that
+  survives being offline or killed.
 
 iOS 13+, Swift 5.9+, no third-party dependencies. Behaviour is specified in
 [docs/sdk-spec.md](../docs/sdk-spec.md), shared with the Android, Flutter and React Native SDKs.
@@ -13,6 +15,7 @@ iOS 13+, Swift 5.9+, no third-party dependencies. Behaviour is specified in
 - [Keys](#keys)
 - [Initialize](#initialize)
 - [Universal Links](#universal-links)
+- [Events, revenue and users](#events-revenue-and-users)
 - [API](#api)
 - [Test your integration](#test-your-integration)
 - [Troubleshooting](#troubleshooting)
@@ -23,11 +26,11 @@ iOS 13+, Swift 5.9+, no third-party dependencies. Behaviour is specified in
 
 ### Swift Package Manager
 
-Xcode → **File → Add Package Dependencies…**, enter the repository URL, pick version `0.1.0`, add the
+Xcode → **File → Add Package Dependencies…**, enter the repository URL, pick version `0.2.0`, add the
 `Dropplink` library to your app target. Or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/ondropp/dropplink-sdks.git", from: "0.1.0"),
+.package(url: "https://github.com/ondropp/dropplink-sdks.git", from: "0.2.0"),
 // target dependencies:
 .product(name: "Dropplink", package: "dropplink-sdks"),
 ```
@@ -35,7 +38,7 @@ Xcode → **File → Add Package Dependencies…**, enter the repository URL, pi
 ### CocoaPods
 
 ```ruby
-pod 'Dropplink', '~> 0.1.0'
+pod 'Dropplink', '~> 0.2.0'
 ```
 
 ## Keys
@@ -151,17 +154,74 @@ func application(_ application: UIApplication, continue userActivity: NSUserActi
 listener isn't called), so you can forward every URL your app receives. Links reported before init
 finishes are sent right after it.
 
+## Events, revenue and users
+
+```swift
+// The funnel. Names are snake_case; up to 20 props of String, number, Bool or NSNull.
+Dropplink.track("add_to_cart", props: ["sku": "TSHIRT-M", "qty": 1])
+Dropplink.track("purchase", revenue: Revenue(amount: 499, currency: "INR", orderId: "A1023"))
+
+// On sign-up and login: your own opaque user id. Email / phone are optional and hashed (SHA-256)
+// on the device; the plain values never leave it. Same user id again is a no-op, so calling it on
+// every launch is fine.
+Dropplink.identify(userId: user.id, email: user.email, phone: user.phoneE164)
+
+// On logout: events after it carry no user.
+Dropplink.logout()
+
+// Consent: false clears the queue and stops events and identify, remembered across launches.
+// Install attribution and deep links keep working.
+Dropplink.setTrackingEnabled(consented)
+let enabled = Dropplink.isTrackingEnabled   // true by default
+```
+
+**Purchases that pay creators must be sent from your server** with `/v1/s2s/events` (server key).
+Revenue sent with `track` is shown in the dashboard as **app-reported** only: the app's SDK key ships in
+the app, so it can't be trusted for payouts. Use `track` for the funnel, your backend for money.
+
+How it behaves:
+
+- Calls return at once. Each entry is written to a queue file (`Application Support/Dropplink/`, excluded
+  from backup) and sent 1 s after the last call, when the app goes to the background, and after each
+  successful init. Nothing is sent before this launch's init succeeds.
+- Entries keep their order, so an `identify` reaches the server before the events tracked after it.
+- Offline or server errors: retried with backoff (1 s up to 5 min) while the app runs, and on the next
+  launch. Each event has an id created at `track` time, so retries never double count.
+- Checked on the device, with a debug log for anything dropped: names must match `^[a-z][a-z0-9_]{0,63}$`;
+  bad prop keys, unsupported values and values that contain an email or are a phone number are dropped;
+  strings are cut to 256 characters; `revenue.amount` must be ≥ 0 (rounded to 2 decimals) and `currency`
+  ISO 4217 (`" inr"` becomes `"INR"`). User ids that are emails or phone numbers are refused.
+- At most 1,000 events / 1 MB wait in the queue; the oldest events without revenue go first. Events older
+  than 7 days are dropped (the server rejects them).
+
+```
+Dropplink: track add_to_cart (queued, 3 waiting)
+Dropplink: events 200: 3 accepted, 0 duplicates, 0 rejected
+Dropplink: event "Add To Cart" dropped: name must be snake_case, e.g. add_to_cart
+Dropplink: identify user_8812 sent
+```
+
 ## API
 
 ```swift
 public enum Dropplink {
-    static let version: String                                  // "0.1.0"
+    static let version: String                                  // "0.2.0"
     static func initialize(config: DropplinkConfig)
     static func setDeepLinkListener(_ listener: ((DeepLink) -> Void)?)
     static func handleDeepLink(_ url: URL)
     @discardableResult static func handleUserActivity(_ activity: NSUserActivity) -> Bool
     static var attribution: Attribution? { get }                // nil before the first successful init
     static var installId: String? { get }                       // nil before initialize
+
+    static func track(_ name: String, props: [String: Any]? = nil, revenue: Revenue? = nil)
+    static func identify(userId: String, email: String? = nil, phone: String? = nil)
+    static func logout()
+    static func setTrackingEnabled(_ enabled: Bool)
+    static var isTrackingEnabled: Bool { get }                  // true by default
+}
+
+public struct Revenue {
+    init(amount: Double, currency: String, orderId: String? = nil)
 }
 
 public struct DropplinkConfig {
@@ -221,19 +281,29 @@ With `debug: true`, failures are logged with the server's error code:
 | `network error` / `5xx` / `429` | Retried 3 times (1 s, 2 s, 4 s), then again on next launch. | Nothing; check connectivity or `baseURL`. |
 | `… is not a Dropplink link for this app` | `handleDeepLink` got a URL that isn't one of your app's links. | Expected for other URLs. |
 | `… has no deep link path` | The link was opened but has no deep link path set. | Set a deep link path on the link in the dashboard. |
+| `event "…" dropped: …` / `prop … dropped: …` | `track` was called with an invalid name, prop or revenue. | Fix the call; the log says which rule. |
+| `events and identify paused until next launch` | `/v1/events` or `/v1/identify` got a `401` (or an unexpected `4xx`). Events stay queued. | Check the key and secret, as for init. |
+| `events will be retried in … s` | Offline or a server error; the queue backs off up to 5 min. | Nothing. |
 
 No link delivered? Check the listener is set (it runs on the main thread), that Associated Domains has
 your link domain, and that `onContinueUserActivity` / `scene(_:continue:)` forwards to the SDK.
 
 ## Privacy
 
-The SDK sends only: a random install id (created by the SDK, not an advertising or vendor id), app and SDK
-version, device model, OS version, locale, time zone and screen size. No IDFA, no contacts, no location,
-no tracking. It stores the install id and last attribution in `UserDefaults(suiteName: "app.ondropp.dropplink")`.
+For install attribution the SDK sends only: a random install id (created by the SDK, not an advertising or
+vendor id), app and SDK version, device model, OS version, locale, time zone and screen size. No IDFA, no
+contacts, no location, no tracking. It stores the install id, last attribution and the
+`setTrackingEnabled` choice in `UserDefaults(suiteName: "app.ondropp.dropplink")`.
+
+If you call `track` / `identify`, it also sends the events and props you pass, your user id and SHA-256
+hashes of the email / phone you pass (never the plain values; they aren't stored either). Waiting entries
+are kept in `Application Support/Dropplink/dropplink-queue.json`, excluded from backup.
+`setTrackingEnabled(false)` deletes them and stops sending.
 
 `PrivacyInfo.xcprivacy` is bundled: `NSPrivacyTracking = false`, UserDefaults access with reason `CA92.1`,
-and the install id declared as a Device ID used for analytics, not linked to the user and not used for
-tracking. Reflect that in your App Store privacy details.
+the install id declared as a Device ID (analytics, not linked to the user), and User ID, Email Address,
+Phone Number, Product Interaction and Purchase History (analytics, linked to the user, not tracking) for
+apps that use `identify` and `track`. Reflect what your app actually sends in your App Store privacy details.
 
 ## Developing the SDK
 
@@ -243,9 +313,9 @@ swift build
 swift test          # runs on macOS; loads fixtures from ../contract
 ```
 
-Tests reproduce the signing vectors in `contract/hmac/vectors.json`, check the init body against
-`contract/init/request.ios.json`, decode every response fixture, and cover the retry rules with a fake HTTP
-layer. `Example/` has a SwiftUI sample app.
+Tests reproduce the signing vectors in `contract/hmac/vectors.json`, check the init, events and identify
+bodies against `contract/`, decode every response fixture, run `contract/events/invalid/` through local
+validation, and cover the retry rules and the event queue with a fake HTTP layer and a manual scheduler. `Example/` has a SwiftUI sample app.
 
 `pod lib lint Dropplink.podspec --allow-warnings` validates the CocoaPods build.
 
@@ -264,3 +334,7 @@ Layout of `Sources/Dropplink/`:
 | `APIClient.swift`, `RetryPolicy.swift`, `Signer.swift`, `HTTPClient.swift` | Signed requests and retries |
 | `InitBody.swift` | `/v1/init` body and device details |
 | `Storage.swift`, `DeepLinkDispatcher.swift`, `Logger.swift` | Persistence, listener delivery, logging |
+| `Events.swift` | `Revenue` and the queue / wire types of `/v1/events` and `/v1/identify` |
+| `EventValidation.swift` | Local checks of `track` and `identify` (spec §11), PII rules, trait hashing |
+| `EventQueue.swift` | Caps, drop order, pruning and batching; the queue file |
+| `EventPipeline.swift`, `Scheduler.swift` | Flush scheduling, the response table and backoff |

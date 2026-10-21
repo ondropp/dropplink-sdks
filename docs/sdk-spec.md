@@ -1,6 +1,6 @@
 # Dropplink SDK spec
 
-_v0.1 · 2026-10-20 · The single source of truth for what every Dropplink SDK does. Each platform's code
+_v0.2 · 2026-10-22 · The single source of truth for what every Dropplink SDK does. Each platform's code
 implements this document; a behaviour change lands here first, in the same commit as the code._
 
 The wire contract (request/response shapes, signing) is owned by `dropp-attribution` and copied into
@@ -17,6 +17,7 @@ retries, deep-link delivery and logging.
 - [8. Logging](#8-logging)
 - [9. Rules every SDK follows](#9-rules-every-sdk-follows)
 - [10. Testing](#10-testing)
+- [11. Events, revenue and users](#11-events-revenue-and-users)
 
 ## 1. Platforms
 
@@ -30,9 +31,9 @@ retries, deep-link delivery and logging.
 **Native SDKs hold all the logic.** The Flutter and React Native packages are thin bridges: they forward
 calls to the native SDK and convert results. No signing, storage or retry logic is duplicated in Dart or JS.
 
-All four share one version number (`0.1.0`), released together (see [releasing.md](./releasing.md)). The
+All four share one version number (`0.2.0`), released together (see [releasing.md](./releasing.md)). The
 `sdkVersion` sent to the server is the SDK's own version, with a suffix for wrappers so the dashboard can
-tell them apart: `0.1.0` (native), `0.1.0-flutter`, `0.1.0-rn`.
+tell them apart: `0.2.0` (native), `0.2.0-flutter`, `0.2.0-rn`.
 
 ## 2. Public API
 
@@ -45,6 +46,11 @@ Names are the same on every platform, adapted to the language's conventions.
 | `handleDeepLink(url)` | Reports an App Link / Universal Link the OS opened the app with. Resolves it through `/v1/deeplink` and delivers the result to the listener. Ignores URLs that aren't `http(s)`. |
 | `getAttribution()` | The last attribution the server returned (`type`, `method`, `linkId`, `source`, …), or `null` before the first successful init. Cached on disk. |
 | `getInstallId()` | This install's id. Developers paste it into the dashboard's **Install debugger**. |
+| `track(name, props?, revenue?)` | Records an in-app event (section 11). Validated, written to the on-disk queue and sent in the background. Never throws, never blocks. |
+| `identify(userId, email?, phone?)` | Links the brand's own user id to this install, when the user signs up or logs in. `email` / `phone` are optional and hashed on the device before they leave it. |
+| `logout()` | Unlinks the user (`/v1/identify` with `userId: null`). Events after it carry no user. |
+| `setTrackingEnabled(enabled)` | `false` clears the queue and stops events and identify, persisted across launches (for consent). Install attribution and deep links keep working. Default `true`. |
+| `isTrackingEnabled()` | The current setting. |
 
 ### Config
 
@@ -59,12 +65,26 @@ Names are the same on every platform, adapted to the language's conventions.
 
 ```
 DeepLink    { path: String, params: Map<String, String>, url: String?, isDeferred: Boolean }
+Revenue     { amount: Double, currency: String, orderId: String? }
 Attribution { type: "attributed" | "organic", method: "install_referrer" | "fingerprint" | "none",
               clickId?, linkId?, campaignId?, creatorId?, source?, confidence?, attributedAt? }
 ```
 
 `DeepLink.url` is the opened URL for App Link opens and `null` for deferred links. `isDeferred` is `true`
 only for the link delivered by `/v1/init` after a fresh install.
+
+### Signatures
+
+| | `track` | `identify` | `Revenue` |
+| --- | --- | --- | --- |
+| Kotlin | `track(name: String, props: Map<String, Any?>? = null, revenue: Revenue? = null)` (`@JvmStatic @JvmOverloads`) | `identify(userId: String, email: String? = null, phone: String? = null)` | `data class Revenue(val amount: Double, val currency: String, val orderId: String? = null)` |
+| Swift | `track(_ name: String, props: [String: Any]? = nil, revenue: Revenue? = nil)` | `identify(userId: String, email: String? = nil, phone: String? = nil)` | `struct Revenue { amount: Double; currency: String; orderId: String? }` |
+| Dart | `Future<void> track(String name, {Map<String, Object?>? props, Revenue? revenue})` | `Future<void> identify(String userId, {String? email, String? phone})` | `class Revenue { double amount; String currency; String? orderId }` |
+| TypeScript | `track(name: string, options?: { props?: EventProps; revenue?: Revenue }): void` | `identify(userId: string, traits?: { email?: string; phone?: string }): void` | `{ amount: number; currency: string; orderId?: string }` |
+
+`logout()`, `setTrackingEnabled(enabled)` and `isTrackingEnabled()` keep their names everywhere
+(Swift: `Dropplink.isTrackingEnabled` is a static property; Dart and TypeScript return `Future<bool>` /
+`Promise<bool>` because the value lives in the native SDK).
 
 ### Example (Kotlin)
 
@@ -156,8 +176,14 @@ early).
 | `installId` | UUID string |
 | `attributed` | boolean |
 | `attribution` | the last attribution JSON |
+| `trackingEnabled` | boolean, absent = `true` |
 
 Android: a JSON file `dropplink.json` in `Context.noBackupFilesDir`. iOS: `UserDefaults(suiteName: "app.ondropp.dropplink")`.
+
+The event queue (section 11) is a separate JSON file, `dropplink-queue.json`, in the same directory on
+Android and in `Application Support/Dropplink/` on iOS (excluded from backup). It is rewritten atomically
+(write to a temp file, then rename) on every change, so a kill mid-write never corrupts it. A file that
+fails to parse is discarded with a debug log, never a crash.
 The secret is never stored by the SDK; it lives in the app's build config.
 
 Why `noBackupFilesDir` on Android: Auto Backup restores `SharedPreferences` onto a new phone, and two
@@ -212,8 +238,111 @@ Every native SDK has unit tests that:
 3. Parse `contract/init/response.attributed.json`, `response.organic.json` and both `deeplink/response.*.json`.
 4. Check the retry rules of section 5 against a fake HTTP layer.
 5. Check a pending deep link is delivered once a listener is set.
+6. Build an events body and an identify body matching `contract/events/request.json` and
+   `contract/identify/request.json` / `request.logout.json`; parse `contract/events/response.partial.json`.
+7. Check the queue rules of section 11: the response table, the caps and drop order, ordering of
+   identify before later events, persistence across a restart, and `setTrackingEnabled(false)`.
+8. Check local validation against each event in `contract/events/invalid/`: `name-not-snake-case` and
+   `negative-revenue` are dropped; `currency-lower-case` is upper-cased and `three-decimals` rounded
+   (section 11), so both are sent fixed; `event-id-not-uuid` and `ts-not-integer` can't happen because
+   the SDK creates `eventId` and `ts` itself. A new fixture with no expectation fails the test.
 
 Wrappers test their bridge (method names, argument conversion) with the platform's mocking tools.
 
 `scripts/sync-contract.sh` re-copies the fixtures from the server repo. Run it whenever the server's
 `npm run fixtures` output changes, and commit the result.
+
+## 11. Events, revenue and users
+
+Server side: `/v1/events` and `/v1/identify` in
+[`dropp-attribution` docs/sdk-api.md](../../dropp-attribution-server/docs/sdk-api.md). Revenue the app
+reports is shown as **app-reported**. Revenue that pays creators comes from the brand's server
+(`/v1/s2s/events`), so the docs tell brands to send purchases from their backend and use `track` for the
+funnel.
+
+### `track`
+
+The SDK creates the `eventId` (UUID v4) and `ts` (unix **seconds**, device clock) when `track` is called,
+and stores both with the event, so every retry sends the same values. It then checks the event locally
+and, if it's invalid, logs why (debug mode) and drops it, instead of letting the server reject it:
+
+| Rule | Locally |
+| --- | --- |
+| `name` matches `^[a-z][a-z0-9_]{0,63}$` | Drop the event |
+| At most 20 props; keys `^[A-Za-z0-9_]{1,40}$` | Drop the bad keys; keep 20 valid ones (the first 20 by insertion order where the platform's map keeps order, else by sorted key, as on iOS) |
+| Prop values: string ≤ 256 chars, finite number, boolean, null | Truncate long strings to 256; drop other value types (lists, maps, NaN) |
+| Prop value contains an email or is a phone number (server's `pii.ts` rules) | Drop the prop (the server would drop it anyway) |
+| `revenue.amount` finite and ≥ 0 | Drop the event (refunds come from the brand's server) |
+| `revenue.amount` more than 2 decimals | Round half-up to 2 decimals |
+| `revenue.currency` | Trim and upper-case; must then match `^[A-Z]{3}$`, else drop the event |
+| `revenue.orderId` 1–128 chars | Empty → omitted; longer → drop the event |
+
+The server's PII rules, ported exactly: an email is `[^\s@]+@[^\s@]+\.[^\s@]{2,}` anywhere in the value; a
+phone is the whole value, after removing spaces, `(`, `)`, `.` and `-`, matching `^\+\d{10,15}$` or
+`^(?:0|91)?[6-9]\d{9}$`.
+
+### `identify` and `logout`
+
+- `userId` is trimmed; 1–128 chars, and not an email or a phone number (same rules), else the call is
+  dropped with a debug log. Brands should pass an opaque id.
+- `email`: trimmed, lower-cased, must contain `@`; sent as `traits.emailHash` = lower-case hex
+  SHA-256 of the UTF-8 bytes. `phone`: spaces, `-`, `(`, `)` and `.` removed; must then match
+  `^\+[1-9]\d{7,14}$` (E.164), else that trait is dropped with a debug log. Sent as `traits.phoneHash`.
+  Plain values never leave the device and are never stored.
+- Calling `identify` with the same user id as the last one queued or sent is a no-op (traits included),
+  so brands can call it on every launch. The last identified user id is kept in the queue file's
+  metadata. The server allows 5 identifies a minute per install, so this matters.
+- `logout()` queues `{ userId: null }` (no traits) and forgets the last user id.
+
+### The queue
+
+`track`, `identify` and `logout` append an entry to the on-disk queue and return. Entries keep their
+order, so an identify always reaches the server before the events tracked after it.
+
+```
+{ "v": 1, "lastUserId": "user_8812" | null,
+  "items": [ { "kind": "event", "eventId", "name", "ts", "props"?, "revenue"? },
+             { "kind": "identify", "userId": "user_8812" | null, "traits"? } ] }
+```
+
+**When it sends:** 1 s after the last `track`/`identify` (debounce), when the app goes to the background,
+and right after every successful `/v1/init`. Never before this launch's init has succeeded, because the
+server must know the install. One flush at a time.
+
+**A flush** takes items from the head: an `identify` is sent alone to `/v1/identify`; otherwise up to 100
+consecutive events (stopping before the next identify) and at most 60 KB of body go in one
+`/v1/events` request. It repeats until the queue is empty or a request fails.
+
+| Response | Do |
+| --- | --- |
+| `200` (events) | Remove every event in the batch: accepted, duplicates and rejected. Log each `rejected` entry and each `warnings` entry in debug mode. |
+| `200` (identify) | Remove it. |
+| `429`, `503`, other `5xx`, network error, timeout | Keep everything. Retry with exponential backoff: 1 s, 2 s, 4 s … capped at 5 min, ± 20% jitter. A `Retry-After` header (seconds) wins when it is longer. |
+| `401 stale_timestamp` | As above, and log "Device clock looks wrong". |
+| Other `401` | Keep everything; stop sending until the next launch. Log loudly. |
+| `404 unknown_install` | Run `/v1/init` again, then retry. If that init fails, or the retry gets `404 unknown_install` again, back off as for `503` (never loop init → events). |
+| `400`, or any other `4xx` (`403`, `413`, a `404` that isn't `unknown_install`) | The batch is malformed (an SDK bug) or the identify was refused: remove that batch / identify and log the `error`. Keeping it would block everything queued behind it. |
+| Anything else (e.g. `3xx`) | As for `503`. |
+
+The backoff resets after any `200`. Retries continue for as long as the process lives; whatever is left
+is sent on the next launch.
+
+**Caps:** at most 1,000 events and 1 MB in the file. When adding an event would exceed either, drop the
+oldest **non-revenue** event first; if only revenue events are left, drop the new event if it has no
+revenue, else the oldest revenue event. Identify entries are never dropped. On load and before every
+flush, drop events whose `ts` is more than 7 days old (the server rejects them).
+
+**`setTrackingEnabled(false)`** empties the queue (and `lastUserId`), stops `track`, `identify`, `logout`
+and flushing, and persists the setting. `setTrackingEnabled(true)` resumes; nothing tracked while it was
+off is recovered.
+
+### Logging (debug mode)
+
+```
+Dropplink: track add_to_cart (queued, 3 waiting)
+Dropplink: events 200: 3 accepted, 0 duplicates, 0 rejected
+Dropplink: event "Add To Cart" dropped: name must be snake_case, e.g. add_to_cart
+Dropplink: identify user_8812 sent
+```
+
+Never log prop values, email, phone, or hashes.

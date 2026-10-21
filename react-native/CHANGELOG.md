@@ -5,6 +5,18 @@ Flutter SDKs ([docs/sdk-spec.md](../docs/sdk-spec.md)).
 
 ## Unreleased
 
+## 0.2.0 - 2026-10-22
+
+Bridges the events, revenue and users API of `app.ondropp:dropplink-android` 0.2.0 and the `Dropplink`
+pod 0.2.0 (docs/sdk-spec.md section 11). Validation, hashing, the on-disk queue and retries stay native.
+
+- `Dropplink.track(name, { props, revenue })`. Prop booleans stay booleans across the bridge.
+- `Dropplink.identify(userId, { email, phone })` and `Dropplink.logout()`.
+- `Dropplink.setTrackingEnabled(enabled)` and `Dropplink.isTrackingEnabled()` for consent.
+- New types `EventProps`, `Revenue`, `IdentifyTraits`.
+- These calls never throw, including when the native module isn't linked.
+- The server now sees `sdkVersion` `0.2.0-rn`.
+
 ## 0.1.0 - 2026-10-20
 
 First release. A thin bridge over `app.ondropp:dropplink-android` 0.1.0 and the `Dropplink` pod 0.1.0;

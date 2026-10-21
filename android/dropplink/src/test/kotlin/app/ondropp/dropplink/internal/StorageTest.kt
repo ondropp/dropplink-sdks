@@ -30,4 +30,16 @@ class StorageTest {
         file.writeText("{not json")
         assertEquals(Storage.State(), Storage(file).read())
     }
+
+    @Test
+    fun trackingEnabledDefaultsToTrueAndIsStoredOnlyWhenOff() {
+        val file = tmp.root.resolve("dropplink.json")
+        file.writeText("""{"installId":"6f1c2a9e-3b7d-4c51-9a8e-2d4f6b1c0e73","attributed":false}""")
+        assertEquals(true, Storage(file).read().trackingEnabled)
+
+        Storage(file).write(Storage.State(installId = "x", trackingEnabled = false))
+        assertEquals(false, Storage(file).read().trackingEnabled)
+        Storage(file).write(Storage.State(installId = "x", trackingEnabled = true))
+        assertEquals(false, file.readText().contains("trackingEnabled"))
+    }
 }

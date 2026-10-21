@@ -8,6 +8,7 @@ import android.os.Looper
 import android.util.Log
 import app.ondropp.dropplink.Dropplink
 import app.ondropp.dropplink.DropplinkConfig
+import app.ondropp.dropplink.Revenue
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -76,8 +77,59 @@ class DropplinkPlugin :
             }
             "getAttribution" -> result.success(Dropplink.getAttribution()?.toMap())
             "getInstallId" -> result.success(Dropplink.getInstallId())
+            "track" -> track(call, result)
+            "identify" -> {
+                val userId = call.argument<String>("userId")
+                if (userId == null) {
+                    result.error("invalid_argument", "userId is required", null)
+                } else {
+                    Dropplink.identify(userId, call.argument<String>("email"), call.argument<String>("phone"))
+                    result.success(null)
+                }
+            }
+            "logout" -> {
+                Dropplink.logout()
+                result.success(null)
+            }
+            "setTrackingEnabled" -> {
+                val enabled = call.argument<Boolean>("enabled")
+                if (enabled == null) {
+                    result.error("invalid_argument", "enabled is required", null)
+                } else {
+                    Dropplink.setTrackingEnabled(enabled)
+                    result.success(null)
+                }
+            }
+            "isTrackingEnabled" -> result.success(Dropplink.isTrackingEnabled())
             else -> result.notImplemented()
         }
+    }
+
+    private fun track(call: MethodCall, result: MethodChannel.Result) {
+        val name = call.argument<String>("name")
+        if (name == null) {
+            result.error("invalid_argument", "name is required", null)
+            return
+        }
+        // Values arrive as String, Boolean, Int/Long, Double or null and are passed on as they are: the
+        // native SDK validates them (spec section 11). The codec decodes into a HashMap, so Dart's
+        // insertion order (used by the "first 20 props" cap) is already lost by the time we get here.
+        val props = call.argument<Map<*, *>>("props")?.let { raw ->
+            LinkedHashMap<String, Any?>(raw.size).apply {
+                raw.forEach { (key, value) -> if (key is String) put(key, value) }
+            }
+        }
+        val revenue = call.argument<Map<*, *>>("revenue")?.let { raw ->
+            val amount = (raw["amount"] as? Number)?.toDouble()
+            val currency = raw["currency"] as? String
+            if (amount == null || currency == null) {
+                result.error("invalid_argument", "revenue needs amount and currency", null)
+                return
+            }
+            Revenue(amount = amount, currency = currency, orderId = raw["orderId"] as? String)
+        }
+        Dropplink.track(name, props, revenue)
+        result.success(null)
     }
 
     private fun initialize(call: MethodCall, result: MethodChannel.Result) {

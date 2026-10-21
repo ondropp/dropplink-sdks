@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   s.swift_version = "5.9"
 
   # The native SDK holds all the logic; this pod is only the bridge.
-  s.dependency "Dropplink", "0.1.0"
+  s.dependency "Dropplink", "0.2.0"
 
   # React Native's helper adds React-Core and the New Architecture dependencies.
   if respond_to?(:install_modules_dependencies, true)

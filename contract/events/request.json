@@ -1,0 +1,24 @@
+{
+  "installId": "6f1c2a9e-3b7d-4c51-9a8e-2d4f6b1c0e73",
+  "events": [
+    {
+      "eventId": "3f2b8c1d-5e6a-4b7c-9d8e-0f1a2b3c4d5e",
+      "name": "add_to_cart",
+      "ts": 1760700100,
+      "props": {
+        "sku": "TSHIRT-M",
+        "qty": 1
+      }
+    },
+    {
+      "eventId": "7a6b5c4d-3e2f-4a1b-8c9d-0e1f2a3b4c5d",
+      "name": "purchase",
+      "ts": 1760700200,
+      "revenue": {
+        "amount": 499,
+        "currency": "INR",
+        "orderId": "A1023"
+      }
+    }
+  ]
+}
