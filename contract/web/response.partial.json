@@ -1,0 +1,11 @@
+{
+  "accepted": 2,
+  "duplicates": 0,
+  "rejected": [
+    {
+      "index": 4,
+      "code": "invalid_event",
+      "message": "name: must be snake_case, e.g. add_to_cart"
+    }
+  ]
+}

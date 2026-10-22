@@ -35,4 +35,4 @@ Comment *why*, not *what*.
 ## Commits and pull requests
 
 One logical change per pull request. Prefix the title with the area: `android:`, `ios:`, `flutter:`,
-`react-native:`, `spec:`, `contract:`. Update the platform's `CHANGELOG.md` under "Unreleased".
+`react-native:`, `web:`, `spec:`, `contract:`. Update the platform's `CHANGELOG.md` under "Unreleased".

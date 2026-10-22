@@ -18,6 +18,7 @@ retries, deep-link delivery and logging.
 - [9. Rules every SDK follows](#9-rules-every-sdk-follows)
 - [10. Testing](#10-testing)
 - [11. Events, revenue and users](#11-events-revenue-and-users)
+- [12. Web](#12-web)
 
 ## 1. Platforms
 
@@ -27,11 +28,13 @@ retries, deep-link delivery and logging.
 | `ios/` | `Dropplink` | Swift | Swift Package Manager, CocoaPods | iOS 13 |
 | `flutter/` | `dropplink` | Dart | pub.dev | Wraps the native SDKs |
 | `react-native/` | `@ondropp/dropplink-react-native` | TypeScript | npm | Wraps the native SDKs |
+| `web/` | `@ondropp/dropplink-web` | TypeScript | npm, and the script tag served on each link domain (`/_d/s.js`) | Evergreen browsers (ES2020); Node 18+ for `/server` |
 
 **Native SDKs hold all the logic.** The Flutter and React Native packages are thin bridges: they forward
 calls to the native SDK and convert results. No signing, storage or retry logic is duplicated in Dart or JS.
+The web SDK is separate (section 12): a website has no install, so it shares no code with the app SDKs.
 
-All four share one version number (`0.2.0`), released together (see [releasing.md](./releasing.md)). The
+All five share one version number (`0.2.0`), released together (see [releasing.md](./releasing.md)). The
 `sdkVersion` sent to the server is the SDK's own version, with a suffix for wrappers so the dashboard can
 tell them apart: `0.2.0` (native), `0.2.0-flutter`, `0.2.0-rn`.
 
@@ -346,3 +349,88 @@ Dropplink: identify user_8812 sent
 ```
 
 Never log prop values, email, phone, or hashes.
+
+## 12. Web
+
+A website has no install and can't keep a secret, so the web SDK has two halves with two keys. The wire
+contract is dropp-attribution's [web-api.md](../../dropp-attribution-server/docs/web-api.md) (the script) and
+[s2s-api.md](../../dropp-attribution-server/docs/s2s-api.md) (orders).
+
+| Half | Import | Key | Sends |
+| --- | --- | --- | --- |
+| Script | `dist/dropplink.min.js` (served as `/_d/s.js` on the app's link domain; sets `window.dropplink`), or `init(config)` from `@ondropp/dropplink-web` | The app's web key `pk_<16 hex>`: public, accepted only from the app's `web.domains` | Behaviour: page views, engaged time, funnel events, an unverified identify. Never money. |
+| Server | `@ondropp/dropplink-web/server` | The server key `sk_<id>.<secret>` | Orders and refunds (`/v1/s2s/events` with `visitorId` or `clickId`), deletion |
+
+### Script
+
+**Start.** No-op without `window` (SSR), without a key matching `^pk_[a-f0-9]{16}$` (logs an error), or when
+`navigator.webdriver` is true. Config: `key`, `endpoint`, `consent` (`granted` | `required`), `spa`,
+`cookieDomain`, `debug`. The script tag reads them from `window.DropplinkConfig` or its `data-*` attributes, and
+when served as `…/s.js` with no endpoint given, sends to `…/e` on the same origin. Calls queued before load in
+`window.dropplink.q` are replayed in order.
+
+**Storage** (localStorage, all JSON): `dl_vid` (visitor UUID), `dl_sess` (`{ id, last, click? }`), `dl_click`
+(`{ id, t }`), `dl_q` (`{ v: 1, items: [{ qid, at, item }] }`), `dl_uid`, `dl_consent`. Cookies, first-party,
+`path=/`, `samesite=lax`, `secure` on https, optional `domain`: `dropp_vid` (395 days) and `dropp_click_id`
+(30 days).
+
+**Landing.** UTM tags (`source`, `medium`, `campaign`, `content`, `term`, ≤ 128 chars) and `dropp_click_id` are
+read from the URL. A valid click is saved only if none is saved yet (first touch, 30 days), even before
+consent. `dropp_click_id` is then removed from the address bar with `history.replaceState`, keeping
+`history.state`; UTM tags stay.
+
+**Sessions.** A session continues while the last activity is under 30 minutes old, unless this page load
+landed with a click different from the session's, or (without a click) with UTM tags. The first event of a page
+load carries `utm` and `clickId`; the first event of a new session also carries `referrer`.
+
+**Page views.** One on start, and (unless `spa: false`) after `pushState`, `replaceState` and `popstate` when
+`pathname + search` changed. `path` is `location.pathname` (≤ 512), `title` ≤ 200.
+
+**Engaged time.** Visible time on the page, sent as an `engage` item (own UUID) when the URL changes or the page
+is hidden, if at least 1 s.
+
+**Calls.** `track(name, props?)` (name `^[a-z][a-z0-9_]{0,63}$`; props cleaned as in section 11, including the
+PII rules), `identify(userId)` (1–128 chars, not an email or phone; sent once per change), `logout()`,
+`grant()`, `revoke()` (clears every key and both cookies), `getVisitorId()` (`null` before consent),
+`getClickId()`, `flush()`.
+
+**Consent `required`.** Until `grant()`: the session lives in memory, no visitor id is created, items wait in
+memory (the latest 50) and nothing is sent. `grant()` persists them and sends.
+
+**Queue and sending.** At most 200 items (dropping page views and engage items first), items older than 24 h
+dropped. A flush 2 s after the last item, at once from 20 items; on hide or `pagehide`, one batch with
+`keepalive`. A batch is ≤ 50 items and ≤ 60,000 characters: `{ key, visitorId, sdkVersion: "<version>-web",
+items }`, posted with `fetch` as `text/plain;charset=UTF-8` (no preflight), `credentials: "omit"`.
+
+| Response | Do |
+| --- | --- |
+| `2xx` | Remove the batch; reset the backoff |
+| `0`, `404`, `405`, `502` from a custom endpoint | Retry the same batch on the default endpoint (the API host) |
+| `401`, `403` | Stop sending this page view; log the server's message |
+| `400`, `413` | Remove the batch (it would block the rest) |
+| Anything else, or no response | Keep it; retry after max(`Retry-After`, backoff): 2 s doubling, up to 5 min, ± 20% |
+
+### Server
+
+| Call | Does |
+| --- | --- |
+| `new DropplinkServer({ serverKey, baseUrl?, timeoutMs?, maxRetries?, fetch? })` | Throws if `serverKey` isn't `sk_<16 hex>.<secret>`, or in a browser. |
+| `track(event \| events)` | `POST /v1/s2s/events`. `ts` may be a `Date`. Empty ids are left out; a malformed `clickId` or `visitorId` is left out with an `unknown_click` / `unknown_visitor` warning, because the server would reject the whole event. Batches of ≤ 100 events and 60 KB; `rejected[].index` maps back to the caller's list. |
+| `deleteUser(userId)`, `getDeletion(requestId)` | `DELETE /v1/s2s/users/:userId`, `GET /v1/s2s/deletions/:requestId` |
+| `readVisitorId(cookieHeader)`, `readClickId(cookieHeader)` | The valid `dropp_vid` / `dropp_click_id` from a `Cookie` header, or `null` |
+
+Retries: network errors, timeouts (10 s), `429` and `5xx`, `maxRetries` (default 3) times, 1 s / 2 s / 4 s ± 20%,
+a longer `Retry-After` winning (≤ 60 s); then, and at once for other statuses, throws `DropplinkError`. The
+server half throws, unlike the app SDKs: it runs in the brand's backend, where a lost order must be visible.
+
+### Release
+
+`scripts/sync-web-script.sh` builds the script and copies it to dropp-attribution's `assets/dropplink-web.js`,
+which the server serves as `/_d/s.js`. Its first line must be `/* dropplink-web <version> …` (checked by the
+server's tests).
+
+### Testing
+
+The script runs in jsdom against `contract/web/request.json` (shape), with a fake `fetch` and fake timers: the
+landing, first touch, sessions, SPA page views and engaged time, validation, consent, the response table and
+the fallback. The server half is tested against `contract/s2s/*` and `contract/schemas/s2s-events-*.json`.

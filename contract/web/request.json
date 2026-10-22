@@ -1,0 +1,48 @@
+{
+  "key": "pk_3f9c1e2a7b6d4c80",
+  "visitorId": "0b6e5c1a-3f2d-4c8e-9a71-5d4b2e6f8c10",
+  "sdkVersion": "0.2.0-web",
+  "items": [
+    {
+      "type": "event",
+      "eventId": "3a6f0e2c-8d1b-4f7a-9c5e-1b2d3e4f5a60",
+      "sessionId": "7c2d9e4f-1a3b-4d5e-8f60-2b1c3d4e5f60",
+      "name": "page_view",
+      "ts": 1760700000,
+      "path": "/products/red-shoe",
+      "title": "Red Shoe",
+      "referrer": "https://l.instagram.com/",
+      "utm": {
+        "source": "instagram",
+        "medium": "link",
+        "campaign": "summer"
+      },
+      "clickId": "c_0123456789abcdef"
+    },
+    {
+      "type": "event",
+      "eventId": "4b7a1f3d-9e2c-4a8b-8d6f-2c3e4f5a6b70",
+      "sessionId": "7c2d9e4f-1a3b-4d5e-8f60-2b1c3d4e5f60",
+      "name": "add_to_cart",
+      "ts": 1760700042,
+      "path": "/products/red-shoe",
+      "props": {
+        "sku": "RS-9",
+        "price": 1499
+      }
+    },
+    {
+      "type": "engage",
+      "eventId": "5c8b2a4e-af3d-4b9c-9e70-3d4f5a6b7c80",
+      "sessionId": "7c2d9e4f-1a3b-4d5e-8f60-2b1c3d4e5f60",
+      "ts": 1760700090,
+      "path": "/products/red-shoe",
+      "ms": 64000
+    },
+    {
+      "type": "identify",
+      "ts": 1760700120,
+      "userId": "user_8812"
+    }
+  ]
+}
