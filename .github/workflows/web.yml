@@ -1,0 +1,35 @@
+name: Web
+
+on:
+  push:
+    branches: [main]
+    paths: ['web/**', 'contract/**', '.github/workflows/web.yml']
+  pull_request:
+    paths: ['web/**', 'contract/**', '.github/workflows/web.yml']
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install dependencies
+        # Also runs `prepare` (the build), so dist/ is checked too.
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm test
