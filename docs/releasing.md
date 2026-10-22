@@ -1,6 +1,6 @@
 # Releasing
 
-All four SDKs share one version and are released together, so a brand never has to work out which
+All five SDKs share one version and are released together, so a brand never has to work out which
 Flutter version matches which Android version.
 
 ## Versioning
@@ -16,13 +16,14 @@ The version appears in:
 | `ios/Sources/Dropplink/Dropplink.swift`, `ios/Dropplink.podspec` | `version` |
 | `flutter/pubspec.yaml`, `flutter/android/build.gradle`, `flutter/ios/dropplink_flutter.podspec` | package version and the native dependency versions |
 | `react-native/package.json`, `react-native/android/build.gradle`, `react-native/*.podspec` | package version and the native dependency versions |
+| `web/package.json`, `web/src/core.ts` | `version`, `VERSION` |
 | The dashboard, `dropplink/src/features/sdk/snippets.ts` | `SDK_VERSION` |
 
 ## Steps
 
 1. Move each `CHANGELOG.md`'s "Unreleased" section under the new version.
 2. Bump every file above. The wrappers' native dependency must equal the new native version.
-3. Merge to `main` with all four CI workflows green.
+3. Merge to `main` with all five CI workflows green.
 4. Tag `v<version>` (the tag is also what Swift Package Manager resolves).
 5. Publish, native first, because the wrappers depend on them:
    1. Android → Maven Central: `cd android && ./gradlew :dropplink:publish` (signing keys and Sonatype
@@ -30,6 +31,9 @@ The version appears in:
    2. iOS → CocoaPods trunk: `pod trunk push ios/Dropplink.podspec`. SPM needs only the tag.
    3. Flutter → pub.dev: `cd flutter && dart pub publish`.
    4. React Native → npm: `cd react-native && npm publish --access public`.
+   5. Web → npm: `cd web && npm run build && npm publish --access public`. Then
+      `scripts/sync-web-script.sh <dropp-attribution>` and deploy the server: it serves the script tag
+      at `/_d/s.js`, so websites get the new version within 5 minutes (its cache lifetime).
 6. Update `SDK_VERSION` in the dashboard so the SDK setup page shows the new version.
 
 ## Credentials (CI secrets, never in the repo)
@@ -39,4 +43,4 @@ The version appears in:
 | `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `SIGNING_KEY`, `SIGNING_PASSWORD` | Android |
 | `COCOAPODS_TRUNK_TOKEN` | iOS |
 | pub.dev publisher (Google account, `ondropp.app` verified publisher) | Flutter |
-| `NPM_TOKEN` (`@ondropp` org) | React Native |
+| `NPM_TOKEN` (`@ondropp` org) | React Native, Web |

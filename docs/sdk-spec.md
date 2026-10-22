@@ -18,6 +18,7 @@ retries, deep-link delivery and logging.
 - [9. Rules every SDK follows](#9-rules-every-sdk-follows)
 - [10. Testing](#10-testing)
 - [11. Events, revenue and users](#11-events-revenue-and-users)
+- [12. Web](#12-web)
 
 ## 1. Platforms
 
@@ -27,13 +28,17 @@ retries, deep-link delivery and logging.
 | `ios/` | `Dropplink` | Swift | Swift Package Manager, CocoaPods | iOS 13 |
 | `flutter/` | `dropplink` | Dart | pub.dev | Wraps the native SDKs |
 | `react-native/` | `@ondropp/dropplink-react-native` | TypeScript | npm | Wraps the native SDKs |
+| `web/` | `@ondropp/dropplink-web` | TypeScript | npm, and a script tag served by the link domain | Browsers from 2019 (ES2019, `fetch` keepalive) |
 
 **Native SDKs hold all the logic.** The Flutter and React Native packages are thin bridges: they forward
 calls to the native SDK and convert results. No signing, storage or retry logic is duplicated in Dart or JS.
 
-All four share one version number (`0.2.0`), released together (see [releasing.md](./releasing.md)). The
+All five share one version number (`0.2.0`), released together (see [releasing.md](./releasing.md)). The
 `sdkVersion` sent to the server is the SDK's own version, with a suffix for wrappers so the dashboard can
-tell them apart: `0.2.0` (native), `0.2.0-flutter`, `0.2.0-rn`.
+tell them apart: `0.2.0` (native), `0.2.0-flutter`, `0.2.0-rn`, `0.2.0-web`.
+
+The web SDK is the exception to "native holds the logic": a browser has no native layer, so it has its own
+implementation of §12. Sections 2–11 describe the app SDKs.
 
 ## 2. Public API
 
@@ -346,3 +351,117 @@ Dropplink: identify user_8812 sent
 ```
 
 Never log prop values, email, phone, or hashes.
+
+## 12. Web
+
+For brands' websites (`web/`). Server side: `dropp-attribution` docs/web-api.md and plan 5.16. It
+records **behaviour**: which Dropplink link brought a visitor, their sessions, page views, funnel events and
+time on page. It never reports money and never sets a user's credit: the key is public, so anything the
+browser sends is unverified. Orders come from the brand's server (`/v1/s2s/events` with `visitorId`).
+
+### Loading
+
+```html
+<script src="https://go.brand.com/_d/s.js" data-key="pk_…" defer></script>
+```
+
+The script comes from the app's link domain, so it and its requests are first-party for the brand's site
+(`go.brand.com` and `brand.com` are one site), and blocklists written against our domain don't match. It
+posts back to the path next to its own: `/_d/s.js` → `/_d/e`, `/v1/web/s.js` → `/v1/web/e`.
+
+| Attribute (`window.DropplinkConfig` key) | Default | |
+| --- | --- | --- |
+| `data-key` (`key`) | required | The app's web key `pk_…`. Anything else turns the script off with a console error. |
+| `data-endpoint` (`endpoint`) | next to the script | A full URL, for a proxy on the brand's own origin. |
+| `data-consent` (`consent`) | `granted` | `required`: see Consent. |
+| `data-spa` (`spa`) | `true` | `"false"` turns off page views on `history.pushState` / `replaceState` / `popstate`. |
+| `data-cookie-domain` (`cookieDomain`) | the page's host | e.g. `.brand.com`, so every subdomain's server reads the cookies. |
+| `data-debug` (`debug`) | `false` | Logs to the console with the prefix `[Dropplink]`. |
+
+Calls made before the script loads are queued by a stub and replayed in order:
+
+```html
+<script>!function(w){var d=w.dropplink=w.dropplink||{q:[]};["track","identify","logout","grant","revoke"]
+.forEach(function(m){d[m]=d[m]||function(){d.q.push([m].concat([].slice.call(arguments)))}})}(window)</script>
+```
+
+npm: `import { init } from "@ondropp/dropplink-web"; const dropplink = init({ key, endpoint })`. Same
+behaviour; `endpoint` defaults to `https://attribution.ondropp.app/v1/web/e`, so pass the link domain's.
+
+### Public API (`window.dropplink`)
+
+| Call | Does |
+| --- | --- |
+| `track(name, props?)` | A funnel event. Standard names: `view_item`, `add_to_cart`, `begin_checkout`, `sign_up`, `purchase` (no amount; revenue comes from the server). `page_view` is automatic. Validated as in §11 (name, props, personal values). |
+| `identify(userId)` | After login: links the visitor to the brand's user id for the journey view. Same user id rules as §11; a repeat of the last id is a no-op. Unverified: it never moves credit. |
+| `logout()` | Sends `userId: null` and forgets the last id. |
+| `grant()` / `revoke()` | Consent. See below. |
+| `getVisitorId()` | The visitor id, for the brand's checkout to send with the order. `null` before consent. |
+| `getClickId()` | The first Dropplink click in the last 30 days, or `null`. |
+| `flush()` | Sends what's queued now. Returns a promise; never rejects. |
+
+Nothing throws. Without `window` (server rendering) every call is a no-op.
+
+### Storage
+
+| localStorage | Cookie (first-party, `SameSite=Lax`, `Secure` on https) | |
+| --- | --- | --- |
+| `dl_vid` | `dropp_vid`, 395 days, refreshed on every send | Visitor id, a UUID v4 |
+| `dl_click` `{ id, t }` | `dropp_click_id`, 30 days | The **first** valid `dropp_click_id` the site was opened with (first touch). A later click doesn't replace it. |
+| `dl_sess` `{ id, last, click? }` | | Session: renewed after **30 minutes** idle, or when a page opens with a different click id or with UTM tags |
+| `dl_q` `{ v: 1, items }` | | The send queue |
+| `dl_uid`, `dl_consent` | | The last identified user id; the consent state |
+
+The cookies exist for the brand's **server**: at checkout it reads `dropp_vid` (and `dropp_click_id`) and
+sends them with the order. Safari limits storage written by page scripts to 7 days; the brand's server
+should also save them on the cart or session at landing.
+
+On load, `dropp_click_id` is removed from the address bar (`history.replaceState`), so a URL the visitor
+shares doesn't carry their click.
+
+### What it sends
+
+`POST` with `content-type: text/plain;charset=UTF-8` (no CORS preflight), `credentials: "omit"`,
+`keepalive: true` when the page is being hidden. Body:
+`{ key, visitorId, sdkVersion: "0.2.0-web", items: [...] }` (`contract/web/request.json`). Items:
+
+| `type` | When | Fields |
+| --- | --- | --- |
+| `event` | `page_view` on load and on each SPA route change to a new path or query; `track` | `eventId` (UUID), `sessionId`, `name`, `ts` (seconds), `path` (`location.pathname` only: queries can hold personal data), `title` (page views), `props`. On the first event of a session: `referrer`, `utm` and `clickId` from the landing URL. |
+| `engage` | The page is hidden, left, or the SPA route changes, after ≥ 1 s visible | `eventId`, `sessionId`, `ts`, `path`, `ms` visible on that page |
+| `identify` | `identify` / `logout` | `ts`, `userId` or `null` |
+
+Nothing is sent from `navigator.webdriver` browsers.
+
+### Queue and retries
+
+Items are written to `dl_q` before sending, so a reload, a closed tab or a network drop loses nothing:
+the next page sends them, and the server drops repeats by `eventId`.
+
+- **When:** 2 s after the last item (debounce), at once at 20 waiting, and when the page is hidden.
+  One send at a time per page; tabs share the queue and the server dedupes.
+- **Batch:** up to 50 items and 60 KB (the `keepalive` limit is 64 KB).
+- **Caps:** 200 items; over it, the oldest page view or engage goes first. Items older than 24 hours are
+  dropped (the server refuses them after 2 days).
+
+| Response | Do |
+| --- | --- |
+| `200` | Remove the batch. Debug: log `rejected`. |
+| `400`, `413` | Remove the batch (a script bug); log. |
+| `401`, `403` | Wrong key, or this website isn't in the app's web domains. Keep the queue, stop sending on this page, `console.error` once. |
+| No response, `404`, `405`, `502` from the link domain | Send the same batch to `https://attribution.ondropp.app/v1/web/e` (the link domain isn't routed or reachable). Not `503`: the collector sends that itself. |
+| `429`, `5xx`, no response | Keep; retry after 2 s, doubling to 5 min, ± 20%. `Retry-After` wins when longer. |
+
+### Consent
+
+With `consent: "required"`, until `grant()`: only the click id is kept (`dl_click` and its cookie,
+needed to credit an order); no visitor id, no session or queue in storage, nothing sent. Events on the
+current page wait in memory (at most 50) and are sent on `grant()`. `revoke()` stops everything and
+deletes all of the above, the click id included. The choice is stored in `dl_consent`.
+
+### Testing
+
+`web/test` (vitest + jsdom) covers: the landing fields and the contract shape (`contract/web/request.json`),
+first touch, URL cleaning and cookies, sessions, SPA page views and engaged time, keepalive on hide,
+validation, retries / Retry-After / reload, 400 and 403, the fallback host, consent, automated browsers,
+and the script tag's attributes and stub queue.

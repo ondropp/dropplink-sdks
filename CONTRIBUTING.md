@@ -5,7 +5,8 @@
 1. **Spec first.** A change to public API or behaviour starts in [`docs/sdk-spec.md`](./docs/sdk-spec.md)
    and lands with the code for every affected platform in the same pull request.
 2. **Logic lives in the native SDKs.** Flutter and React Native only bridge. If you're writing signing,
-   storage or retry code in Dart or TypeScript, it belongs in `android/` and `ios/` instead.
+   storage or retry code in Dart or TypeScript, it belongs in `android/` and `ios/` instead. The one
+   exception is `web/`: a browser has no native layer, so it implements spec §12 itself.
 3. **Never crash the host app.** Public calls don't throw and don't block the main thread.
 4. **No new dependencies** without a reason written in the pull request. Brands' apps already carry
    plenty, and every dependency is a possible version conflict.
@@ -35,4 +36,4 @@ Comment *why*, not *what*.
 ## Commits and pull requests
 
 One logical change per pull request. Prefix the title with the area: `android:`, `ios:`, `flutter:`,
-`react-native:`, `spec:`, `contract:`. Update the platform's `CHANGELOG.md` under "Unreleased".
+`react-native:`, `web:`, `spec:`, `contract:`. Update the platform's `CHANGELOG.md` under "Unreleased".

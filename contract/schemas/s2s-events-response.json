@@ -58,28 +58,74 @@
     "warnings": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "eventId": {
-            "type": "string"
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "eventId": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string",
+                "const": "pii_in_props"
+              },
+              "props": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "eventId",
+              "code",
+              "props"
+            ],
+            "additionalProperties": false
           },
-          "code": {
-            "type": "string",
-            "const": "pii_in_props"
+          {
+            "type": "object",
+            "properties": {
+              "eventId": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string",
+                "const": "unknown_click"
+              },
+              "clickId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "eventId",
+              "code",
+              "clickId"
+            ],
+            "additionalProperties": false
           },
-          "props": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          {
+            "type": "object",
+            "properties": {
+              "eventId": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string",
+                "const": "unknown_visitor"
+              },
+              "visitorId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "eventId",
+              "code",
+              "visitorId"
+            ],
+            "additionalProperties": false
           }
-        },
-        "required": [
-          "eventId",
-          "code",
-          "props"
-        ],
-        "additionalProperties": false
+        ]
       }
     }
   },

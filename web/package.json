@@ -1,0 +1,50 @@
+{
+  "name": "@ondropp/dropplink-web",
+  "version": "0.2.0",
+  "description": "Dropplink for websites: which creator's link brought each visitor, and what they did on the site.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./dropplink.js": "./dist/dropplink.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": [
+    "./dist/dropplink.js"
+  ],
+  "scripts": {
+    "build": "node build.mjs && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "size": "node build.mjs --size"
+  },
+  "keywords": [
+    "dropplink",
+    "attribution",
+    "analytics",
+    "creators"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ondropp/dropplink-sdks.git",
+    "directory": "web"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.8",
+    "esbuild": "0.25.10",
+    "jsdom": "26.1.0",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

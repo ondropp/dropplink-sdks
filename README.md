@@ -1,7 +1,8 @@
 # Dropplink SDKs
 
 The SDKs brands add to their apps so Dropplink can attribute installs to the link, channel and creator
-that brought them, and open deep links.
+that brought them, and open deep links; and the script brands add to their websites to see what each
+creator's visitors do there.
 
 | Platform | Folder | Install | Docs |
 | --- | --- | --- | --- |
@@ -9,6 +10,7 @@ that brought them, and open deep links.
 | iOS (Swift) | [`ios/`](./ios) | SPM or `pod 'Dropplink', '~> 0.1.0'` | [README](./ios/README.md) |
 | Flutter | [`flutter/`](./flutter) | `flutter pub add dropplink_flutter` | [README](./flutter/README.md) |
 | React Native | [`react-native/`](./react-native) | `npm install @ondropp/dropplink-react-native` | [README](./react-native/README.md) |
+| Web | [`web/`](./web) | `<script src="https://go.brand.com/_d/s.js" data-key="pk_…">` or `npm install @ondropp/dropplink-web` | [README](./web/README.md) |
 
 ## How it fits together
 
@@ -38,7 +40,8 @@ android/            Gradle project: :dropplink library + :sample app
 ios/                Swift package + Dropplink.podspec
 flutter/            Flutter plugin wrapping android/ and ios/
 react-native/       React Native module wrapping android/ and ios/
-scripts/            sync-contract.sh
+web/                the website script (its own implementation: browsers have no native layer)
+scripts/            sync-contract.sh, sync-web-script.sh
 .github/workflows/  one CI workflow per platform
 ```
 
@@ -53,6 +56,7 @@ Each folder is self-contained and has its own README with build and test command
 | iOS | `cd ios && swift test` |
 | Flutter | `cd flutter && flutter test` |
 | React Native | `cd react-native && npm test` |
+| Web | `cd web && npm test` |
 
 ## For brands
 
