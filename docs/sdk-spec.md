@@ -208,6 +208,9 @@ Two sources, one listener:
   app: deliver nothing.
 - `clickId` set but `deepLink: null` means the link has no deep link path: deliver nothing (the click is
   still recorded server-side).
+- `redirectUrl` set means the link has a custom redirect and must not stay in the app (it was shared as
+  `/w/<code>`, but the OS opened the app anyway): open `redirectUrl` in a browser, never through the app's
+  own link handling, and deliver nothing. Android does this; iOS doesn't yet (the AASA excludes `/w/*`).
 - Listener callbacks run on the main thread / main isolate / JS thread.
 - If no listener is set yet, keep the **latest** pending link in memory and deliver it as soon as one is set.
   Never persist it.
@@ -240,7 +243,7 @@ Every native SDK has unit tests that:
 
 1. Reproduce every `signature` in `contract/hmac/vectors.json`.
 2. Build an init body and check it has the fields and types of `contract/init/request.<platform>.json`.
-3. Parse `contract/init/response.attributed.json`, `response.organic.json` and both `deeplink/response.*.json`.
+3. Parse `contract/init/response.attributed.json`, `response.organic.json` and every `deeplink/response.*.json`.
 4. Check the retry rules of section 5 against a fake HTTP layer.
 5. Check a pending deep link is delivered once a listener is set.
 6. Build an events body and an identify body matching `contract/events/request.json` and

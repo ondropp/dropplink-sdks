@@ -123,9 +123,14 @@ so it can resolve the link's deep link path and record the open.
            <category android:name="android.intent.category.BROWSABLE" />
            <data android:scheme="https" />
            <data android:host="go.brand.com" />
+           <!-- One path segment only, so custom-redirect links (/w/<code>) open in the browser. -->
+           <data android:pathAdvancedPattern="/[a-z0-9_-]+" />
        </intent-filter>
    </activity>
    ```
+
+   Android 11 and older ignore `pathAdvancedPattern` and open the app for `/w/` links too; the SDK then
+   sends the user on to the link's custom URL in the browser.
 
 3. Forward the URL from `onCreate` (cold start) and `onNewIntent` (app already running):
 

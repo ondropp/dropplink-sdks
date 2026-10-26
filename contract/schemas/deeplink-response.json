@@ -36,11 +36,23 @@
           "type": "null"
         }
       ]
+    },
+    "redirectUrl": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uri"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "required": [
     "clickId",
-    "deepLink"
+    "deepLink",
+    "redirectUrl"
   ],
   "additionalProperties": false
 }

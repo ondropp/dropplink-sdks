@@ -129,6 +129,12 @@ internal class FakeEnvironment(
         referrerReads++
         return referrer
     }
+
+    val openedInBrowser = mutableListOf<String>()
+    override fun openInBrowser(url: String): Boolean {
+        openedInBrowser += url
+        return true
+    }
 }
 
 internal fun errorBody(code: String, message: String = code) =

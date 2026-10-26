@@ -24,6 +24,10 @@ In-app events, revenue and users (spec section 11).
   unknown_install` re-runs init; `400` drops the batch. At most 1,000 events / 1 MB (oldest non-revenue
   events dropped first) and nothing older than 7 days.
 - `sdkVersion` is now `0.2.0`.
+- A custom-redirect link (`/w/<code>`) that opens the app anyway (Android 11 and older ignore the intent
+  filter's `pathAdvancedPattern`) is sent on to its URL in a browser, from `/v1/deeplink`'s `redirectUrl`;
+  the deep link listener gets nothing. The SDK's manifest adds a `<queries>` entry for browsers. The sample
+  intent filters now leave `/w/` out.
 
 ## 0.1.0 - 2026-10-20
 

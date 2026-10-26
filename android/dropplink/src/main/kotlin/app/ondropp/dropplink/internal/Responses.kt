@@ -9,7 +9,8 @@ internal data class DeepLinkTarget(val path: String, val params: Map<String, Str
 
 internal class InitResponse(val attribution: Attribution, val deepLink: DeepLinkTarget?)
 
-internal class DeepLinkResponse(val clickId: String?, val deepLink: DeepLinkTarget?)
+/** [redirectUrl]: the link has a custom redirect, so the open belongs in the browser, not the app. */
+internal class DeepLinkResponse(val clickId: String?, val deepLink: DeepLinkTarget?, val redirectUrl: String?)
 
 /** `/v1/events` 200: every event of the batch is accepted, a duplicate of an earlier attempt, or rejected. */
 internal class EventsResponse(
@@ -45,7 +46,11 @@ internal object Responses {
     @Throws(JSONException::class)
     fun parseDeepLink(body: String): DeepLinkResponse {
         val json = JSONObject(body)
-        return DeepLinkResponse(clickId = json.stringOrNull("clickId"), deepLink = parseDeepLinkTarget(json))
+        return DeepLinkResponse(
+            clickId = json.stringOrNull("clickId"),
+            deepLink = parseDeepLinkTarget(json),
+            redirectUrl = json.stringOrNull("redirectUrl"),
+        )
     }
 
     @Throws(JSONException::class)

@@ -37,6 +37,8 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https" android:host="links.example.com"/>
+                <!-- One path segment only, so custom-redirect links (/w/<code>) open in the browser. -->
+                <data android:pathAdvancedPattern="/[a-z0-9_-]+"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

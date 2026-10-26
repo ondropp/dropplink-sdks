@@ -43,6 +43,18 @@ class ResponsesTest {
         val response = Responses.parseDeepLink(Contract.text("deeplink/response.matched.json"))
         assertEquals("c_3d9a0b1c2e4f6a8b", response.clickId)
         assertEquals(DeepLinkTarget("/product/123", mapOf("variant" to "red", "ref" to "story")), response.deepLink)
+        assertNull(response.redirectUrl)
+    }
+
+    @Test
+    fun parsesCustomRedirectDeepLink() {
+        val response = Responses.parseDeepLink(Contract.text("deeplink/response.redirect.json"))
+        assertEquals("c_3d9a0b1c2e4f6a8b", response.clickId)
+        assertNull(response.deepLink)
+        assertEquals(
+            "https://brand.com/blog?dropp_click_id=c_3d9a0b1c2e4f6a8b&utm_source=instagram&utm_medium=link&utm_campaign=blog",
+            response.redirectUrl,
+        )
     }
 
     @Test

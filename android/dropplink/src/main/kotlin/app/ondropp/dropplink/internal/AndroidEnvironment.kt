@@ -2,9 +2,12 @@ package app.ondropp.dropplink.internal
 
 import android.app.Activity
 import android.app.Application
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -48,6 +51,29 @@ internal class AndroidEnvironment(
     }
 
     override fun readInstallReferrer(): InstallReferrer? = referrerReader.read()
+
+    /**
+     * Targets a browser package explicitly: a plain VIEW intent could resolve back to this app (or another
+     * one) through App Links. Finding browsers needs the `<queries>` entry in the SDK's manifest.
+     */
+    override fun openInBrowser(url: String): Boolean {
+        val pm = context.packageManager
+        val probe = Intent(Intent.ACTION_VIEW, Uri.parse("https://")).addCategory(Intent.CATEGORY_BROWSABLE)
+        val isBrowser = { pkg: String? -> pkg != null && pkg != "android" && pkg != context.packageName }
+        val browser = pm.resolveActivity(probe, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+            ?.takeIf(isBrowser)
+            ?: pm.queryIntentActivities(probe, 0).map { it.activityInfo.packageName }.firstOrNull(isBrowser)
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            .addCategory(Intent.CATEGORY_BROWSABLE)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (browser != null) intent.setPackage(browser)
+        return try {
+            context.startActivity(intent)
+            true
+        } catch (e: ActivityNotFoundException) {
+            false
+        }
+    }
 }
 
 internal fun storageFile(context: Context): File = File(context.noBackupFilesDir, "dropplink.json")

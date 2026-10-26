@@ -142,6 +142,8 @@ already handle `Linking` yourself, call `Dropplink.handleDeepLink(url)` from the
        <category android:name="android.intent.category.DEFAULT" />
        <category android:name="android.intent.category.BROWSABLE" />
        <data android:scheme="https" android:host="go.brand.com" />
+       <!-- One path segment only, so custom-redirect links (/w/<code>) open in the browser. -->
+       <data android:pathAdvancedPattern="/[a-z0-9_-]+" />
      </intent-filter>
    </activity>
    ```

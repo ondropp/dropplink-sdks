@@ -226,6 +226,21 @@ class DropplinkCoreTest {
     }
 
     @Test
+    fun customRedirectOpensTheBrowserAndDeliversNothing() {
+        val http = FakeHttpClient(200 to organic, 200 to Contract.text("deeplink/response.redirect.json"))
+        val core = core(http)
+        core.start()
+        core.handleDeepLink("https://go.brand.com/w/blog")
+
+        assertEquals("https://go.brand.com/w/blog", http.requests[1].json.getString("url"))
+        assertEquals(
+            listOf("https://brand.com/blog?dropp_click_id=c_3d9a0b1c2e4f6a8b&utm_source=instagram&utm_medium=link&utm_campaign=blog"),
+            env.openedInBrowser,
+        )
+        assertTrue(delivered.isEmpty())
+    }
+
+    @Test
     fun clickWithoutDeepLinkPathDeliversNothing() {
         val http = FakeHttpClient(200 to organic, 200 to """{"clickId":"c_1","deepLink":null}""")
         val core = core(http)

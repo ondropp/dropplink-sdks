@@ -220,6 +220,13 @@ internal class DropplinkCore(
             logger.error("deeplink: unreadable response: $e")
             return
         }
+        parsed.redirectUrl?.let { redirect ->
+            // A custom-redirect link the OS opened the app with anyway (Android 11 and older ignore the
+            // intent filter's path pattern). It goes to the browser, and the listener gets nothing.
+            val opened = environment.openInBrowser(redirect)
+            logger.debug(if (opened) "deeplink: custom redirect opened in the browser" else "deeplink: no browser for the custom redirect")
+            return
+        }
         val target = parsed.deepLink
         if (target == null) {
             // clickId null: not one of this app's links. clickId set: the link has no deep link path.
