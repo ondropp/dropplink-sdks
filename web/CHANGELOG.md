@@ -5,15 +5,16 @@ React Native SDKs ([docs/sdk-spec.md](../docs/sdk-spec.md)).
 
 ## Unreleased
 
-## 0.2.0 - 2026-10-22
+## 0.2.0 - 2026-10-23
 
-First release (docs/sdk-spec.md §12).
+First release: website behaviour and website orders (docs/sdk-spec.md section 12; wire contract:
+dropp-attribution `docs/web-api.md`).
 
-- A script tag served by the app's link domain (`/_d/s.js`), and an npm build with `init(config)`.
-- Visitor id and first-touch click id in localStorage and the `dropp_vid` / `dropp_click_id` cookies, for
-  the brand's server to send with orders. `dropp_click_id` is removed from the address bar.
-- Sessions (30 minutes idle), automatic page views including SPA route changes, engaged time per page.
-- `track(name, props?)`, `identify(userId)`, `logout()`, with the §11 validation and personal-data rules.
-- A localStorage queue: batches of up to 50 items, retries with backoff and `Retry-After`, `keepalive`
-  sends when the page is hidden, fallback to the API host when the link domain isn't routed.
-- Consent mode (`data-consent="required"`, `grant()`, `revoke()`). Off in automated browsers.
+- Script tag (`dist/dropplink.min.js`, served as `/_d/s.js` on link domains) and `init(config)` for bundlers:
+  page views including single-page navigations, engaged time, sessions (30 minutes idle), the landing's UTM tags,
+  referrer and first Dropplink click (first touch), `track`, `identify` (unverified), `logout`, `grant` /
+  `revoke` for consent, `getVisitorId`, `getClickId`, `flush`. A localStorage queue with backoff, `keepalive` on
+  hide, fallback to the API host. Configured by `data-*` attributes or `window.DropplinkConfig`; calls made
+  before load are replayed from `dropplink.q`.
+- Server (`@ondropp/dropplink-web/server`): `DropplinkServer.track()` with `visitorId` or `clickId`, batching,
+  retries and `DropplinkError`; `deleteUser()`, `getDeletion()`, `readVisitorId()`, `readClickId()`.

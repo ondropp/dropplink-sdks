@@ -1,8 +1,7 @@
 # Dropplink SDKs
 
 The SDKs brands add to their apps so Dropplink can attribute installs to the link, channel and creator
-that brought them, and open deep links; and the script brands add to their websites to see what each
-creator's visitors do there.
+that brought them, and open deep links, and to their websites so orders placed there are credited the same way.
 
 | Platform | Folder | Install | Docs |
 | --- | --- | --- | --- |
@@ -10,7 +9,7 @@ creator's visitors do there.
 | iOS (Swift) | [`ios/`](./ios) | SPM or `pod 'Dropplink', '~> 0.1.0'` | [README](./ios/README.md) |
 | Flutter | [`flutter/`](./flutter) | `flutter pub add dropplink_flutter` | [README](./flutter/README.md) |
 | React Native | [`react-native/`](./react-native) | `npm install @ondropp/dropplink-react-native` | [README](./react-native/README.md) |
-| Web | [`web/`](./web) | `<script src="https://go.brand.com/_d/s.js" data-key="pk_…">` or `npm install @ondropp/dropplink-web` | [README](./web/README.md) |
+| Web (browser + Node) | [`web/`](./web) | `<script src="https://go.yourbrand.com/_d/s.js" data-key="pk_…">`, or `npm install @ondropp/dropplink-web` | [README](./web/README.md) |
 
 ## How it fits together
 
@@ -23,7 +22,7 @@ creator's visitors do there.
 
 - **Native SDKs hold all the logic**: install id, Play Install Referrer, request signing, retries,
   deep-link delivery. The Flutter and React Native packages only forward calls, so a fix lands once.
-- **One spec, four SDKs.** [`docs/sdk-spec.md`](./docs/sdk-spec.md) defines the public API and every
+- **One spec, five SDKs.** [`docs/sdk-spec.md`](./docs/sdk-spec.md) defines the public API and every
   behaviour. Change the spec first, then the code, in the same commit.
 - **The server owns the wire contract.** [`contract/`](./contract) is a copy of
   `dropp-attribution`'s generated fixtures (JSON schemas, sample requests and responses, HMAC test
@@ -40,8 +39,8 @@ android/            Gradle project: :dropplink library + :sample app
 ios/                Swift package + Dropplink.podspec
 flutter/            Flutter plugin wrapping android/ and ios/
 react-native/       React Native module wrapping android/ and ios/
-web/                the website script (its own implementation: browsers have no native layer)
-scripts/            sync-contract.sh, sync-web-script.sh
+web/                Website SDK: the website collector script + server-side orders (TypeScript)
+scripts/            sync-contract.sh
 .github/workflows/  one CI workflow per platform
 ```
 

@@ -1,8 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from 'vitest/config';
 
-export default defineConfig({
-  test: {
-    environment: "jsdom",
-    environmentOptions: { jsdom: { url: "https://shop.brand.example/" } },
-  },
-});
+// Server tests run in Node; browser tests opt into jsdom with `// @vitest-environment jsdom`.
+export default defineConfig({ test: { environment: 'node', include: ['test/**/*.test.ts'], setupFiles: ['test/setup.ts'] } });

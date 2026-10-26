@@ -25,10 +25,11 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Install dependencies
+        # Also runs `prepare` (the build), so dist/ is checked too.
         run: npm ci
       - name: Typecheck
         run: npm run typecheck
+      - name: Lint
+        run: npm run lint
       - name: Test
         run: npm test
-      - name: Build
-        run: npm run size

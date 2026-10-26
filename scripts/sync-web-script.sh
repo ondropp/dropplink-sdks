@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# Builds the web SDK and copies its script-tag bundle into dropp-attribution, which serves it at
-# https://<link domain>/_d/s.js. Run after any change under web/src, then commit both repos.
+# Builds the web SDK's script-tag file and copies it into dropp-attribution, which serves it as /_d/s.js on
+# every link domain (assets/dropplink-web.js). Run on release, then commit the asset in the server repo.
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
 server="${1:-$here/../dropp-attribution-server}"
-[ -d "$server/src" ] || { echo "No server repo at $server (pass its path as the first argument)"; exit 1; }
-(cd "$here/web" && npm run build >/dev/null)
-mkdir -p "$server/assets"
-cp "$here/web/dist/dropplink.js" "$server/assets/dropplink-web.js"
-echo "Copied web/dist/dropplink.js to $server/assets/dropplink-web.js"
+[ -d "$server/assets" ] || { echo "No assets/ in $server (pass the server repo path as the first argument)"; exit 1; }
+(cd "$here/web" && npm run build)
+cp "$here/web/dist/dropplink.min.js" "$server/assets/dropplink-web.js"
+echo "Copied web/dist/dropplink.min.js to $server/assets/dropplink-web.js"

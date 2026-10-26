@@ -1,50 +1,83 @@
 {
   "name": "@ondropp/dropplink-web",
   "version": "0.2.0",
-  "description": "Dropplink for websites: which creator's link brought each visitor, and what they did on the site.",
+  "description": "Dropplink for websites: see what visitors from each creator, campaign and link do on your site, and credit website orders to the creator who brought them.",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     },
-    "./dropplink.js": "./dist/dropplink.js",
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js",
+      "require": "./dist/server.cjs"
+    },
     "./package.json": "./package.json"
   },
+  "sideEffects": [
+    "./dist/dropplink.min.js"
+  ],
   "files": [
     "dist",
-    "README.md",
-    "CHANGELOG.md"
-  ],
-  "sideEffects": [
-    "./dist/dropplink.js"
+    "src",
+    "!**/__tests__"
   ],
   "scripts": {
-    "build": "node build.mjs && tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
+    "build": "node scripts/build.mjs",
+    "prepare": "npm run build",
+    "typecheck": "tsc",
+    "lint": "eslint \"**/*.{js,mjs,ts}\"",
     "test": "vitest run",
-    "size": "node build.mjs --size"
+    "clean": "rm -rf dist"
   },
   "keywords": [
-    "dropplink",
     "attribution",
-    "analytics",
-    "creators"
+    "web",
+    "website",
+    "utm",
+    "shopify",
+    "creator",
+    "dropplink"
   ],
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ondropp/dropplink-sdks.git",
     "directory": "web"
   },
+  "author": "Dropp",
+  "license": "MIT",
+  "homepage": "https://github.com/ondropp/dropplink-sdks/tree/main/web#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "devDependencies": {
-    "@types/node": "^22.18.8",
-    "esbuild": "0.25.10",
-    "jsdom": "26.1.0",
-    "typescript": "5.9.3",
-    "vitest": "3.2.4"
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^22.18.0",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "jsdom": "^26.1.0",
+    "prettier": "^3.9.6",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">= 18"
+  },
+  "prettier": {
+    "quoteProps": "consistent",
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "es5",
+    "useTabs": false,
+    "printWidth": 140
   }
 }

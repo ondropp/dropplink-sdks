@@ -1,109 +1,140 @@
-# Dropplink for websites
+# @ondropp/dropplink-web
 
-`@ondropp/dropplink-web` shows a brand which creator's link brought each website visitor and what they did
-next: pages, the funnel (product → cart → checkout → order), where they dropped off, and time on page.
-About 4.5 KB gzipped, no dependencies.
+Dropplink for websites. See what visitors from each creator, campaign and link do on your site (pages, funnel
+steps, where they drop off) and credit website orders to the creator who brought them.
 
-Orders and revenue are **not** sent from the browser. Your server sends them, with the visitor id this
-script puts in a cookie, so creator payouts never depend on data anyone can fake from a browser console.
+Two halves, one package:
 
-Full behaviour: [docs/sdk-spec.md §12](../docs/sdk-spec.md#12-web).
+| | Runs in | Does | Key |
+| --- | --- | --- | --- |
+| **Script** (script tag, or `import { init } from '@ondropp/dropplink-web'`) | Every page of your site | Page views (single-page apps too), time on page, sessions, the landing's UTM tags and Dropplink click, your funnel events. | The app's **web key** (`pk_…`), public, works only on your website domains |
+| **Server** (`@ondropp/dropplink-web/server`) | Your backend (Node 18+, Bun, Deno, edge) | Orders and refunds, with the visitor id, so they're credited. | The app's **server key** (`sk_…`), secret |
+
+Money never comes from the browser. The web key is public by design, so Dropplink treats what the script sends
+as behaviour only; orders and refunds come from your server.
 
 ## 1. Add your website to the app
 
-In the Dropplink dashboard, open the app, add your website's hosts (`brand.com`, `shop.brand.com`) under
-**Website**, and copy the **web key** (`pk_…`). Batches from any other website are refused.
+In the Dropplink dashboard, **Settings → Project details → Website**: add your website's domains (e.g.
+`yourbrand.com`, `shop.yourbrand.com`). The app gets a web key, `pk_…`. The script only works on those domains.
 
 ## 2. Add the script
 
-On every page, as high in `<head>` as you can. Use your own link domain (the one your links use):
+Served from your own link domain, so it's first-party and blocklists don't match it:
 
 ```html
-<script>!function(w){var d=w.dropplink=w.dropplink||{q:[]};["track","identify","logout","grant","revoke"]
-.forEach(function(m){d[m]=d[m]||function(){d.q.push([m].concat([].slice.call(arguments)))}})}(window)</script>
-<script src="https://go.brand.com/_d/s.js" data-key="pk_…" defer></script>
+<script src="https://go.yourbrand.com/_d/s.js" data-key="pk_3f9c1e2a7b6d4c80" async></script>
 ```
 
-The first line lets you call `dropplink.track(…)` before the script has loaded. Page views, including
-route changes in single-page apps, are recorded automatically.
+Page views start right away. To track before the script has loaded, add this stub first; calls wait in
+`dropplink.q` and run when it loads:
 
-Or from npm:
+```html
+<script>
+  window.dropplink = window.dropplink || { q: [] };
+  ['track', 'identify', 'logout', 'grant', 'revoke'].forEach(function (m) {
+    dropplink[m] = dropplink[m] || function () { dropplink.q.push([m].concat([].slice.call(arguments))); };
+  });
+</script>
+```
+
+**Or npm**, with a bundler:
 
 ```ts
-import { init } from "@ondropp/dropplink-web";
+import { init } from '@ondropp/dropplink-web';
 
-export const dropplink = init({ key: "pk_…", endpoint: "https://go.brand.com/_d/e" });
+// Once, in the browser (in Next.js, in a client component rendered by the root layout).
+const dropplink = init({ key: 'pk_3f9c1e2a7b6d4c80', endpoint: 'https://go.yourbrand.com/_d/e' });
 ```
 
-## 3. Track the funnel
+| Option | Script tag | Default | |
+| --- | --- | --- | --- |
+| `key` | `data-key` | required | The app's web key |
+| `endpoint` | `data-endpoint` | `/_d/e` beside the script; else the API host | Where batches go |
+| `consent` | `data-consent="required"` | `'granted'` | Wait for `grant()` (cookie banners) |
+| `spa` | `data-spa="false"` | `true` | Count `pushState` / `popstate` navigations |
+| `cookieDomain` | `data-cookie-domain=".yourbrand.com"` | this host | Share the visitor across subdomains |
+| `debug` | `data-debug="true"` | `false` | Console logs. Never ship it on. |
+
+## 3. Track your funnel
+
+The Web campaigns funnel uses these names: `page_view` (automatic), `view_item`, `add_to_cart`,
+`begin_checkout`, `sign_up`, `purchase`.
 
 ```js
-dropplink.track("view_item", { sku: "RS-9", price: 1499 });
-dropplink.track("add_to_cart", { sku: "RS-9", price: 1499 });
-dropplink.track("begin_checkout");
-dropplink.track("sign_up");
+dropplink.track('view_item', { sku: 'RS-9' });
+dropplink.track('add_to_cart', { sku: 'RS-9', price: 1499 });
+dropplink.track('begin_checkout');
+dropplink.identify('user_8812'); // after sign-in: your own id, never an email or phone
+dropplink.logout();
 ```
 
-These names build the funnel in the dashboard. Your own names (`snake_case`) work too and show up as events.
-Props: up to 20, strings/numbers/booleans; values that look like an email or a phone number are dropped.
-
-After login, link the visitor to your user id (never an email or phone number):
-
-```js
-dropplink.identify("user_8812");
-dropplink.logout(); // on sign-out
-```
+Props: up to 20, keys `A–Z a–z 0–9 _`, values string / number / boolean / null. Anything that looks like an
+email or phone number is dropped in the browser. `identify` is unverified: it links the visitor to the user in
+the journey view only, never for credit.
 
 ## 4. Send orders from your server
 
-At checkout, read the `dropp_vid` cookie (or `dropplink.getVisitorId()` in the page) and keep it with the
-order. When the order is paid, send it from your backend with the app's **server key**:
+```ts
+import { DropplinkServer, readVisitorId } from '@ondropp/dropplink-web/server';
 
-```bash
-curl https://attribution.ondropp.app/v1/s2s/events \
-  -H "Authorization: Bearer sk_…" -H "Content-Type: application/json" \
-  -d '{"events":[{"eventId":"order-W5521","visitorId":"<dropp_vid>","userId":"user_8812",
-       "name":"purchase","ts":1760700300,"revenue":{"amount":1499,"currency":"INR","orderId":"W5521"}}]}'
-```
+const dropplink = new DropplinkServer({ serverKey: process.env.DROPPLINK_SERVER_KEY! });
 
-The order is credited to the creator whose link first brought this visitor (within 30 days). With a
-`userId`, that creator also keeps the customer's later orders, from any device. Refunds: the same call
-with a negative amount.
+// When the order is created: keep the visitor with it (or send dropplink.getVisitorId() from the checkout).
+order.droppVisitorId = readVisitorId(req.headers.cookie);
 
-**Shopify:** store the ids on the cart as soon as the visitor lands, so they reach the order even if
-Safari has cleared the cookie by then:
-
-```js
-fetch("/cart/update.js", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ attributes: { dropp_vid: dropplink.getVisitorId(), dropp_click_id: dropplink.getClickId() } }),
+// When the payment is confirmed:
+await dropplink.track({
+  eventId: `order-${order.id}`, // your own id: a webhook that fires twice counts once
+  visitorId: order.droppVisitorId,
+  userId: order.customerId, // optional; with it the visitor is shown as this user (verified)
+  name: 'purchase',
+  ts: order.paidAt,
+  revenue: { amount: order.total, currency: 'INR', orderId: order.id },
 });
 ```
 
-## Options
+The order goes to the visitor's **first** Dropplink click (first touch). With a `userId`, that click also becomes
+the customer's first touch, so their later orders are credited by `userId` alone, on any device. Refunds are a
+negative `amount` with the refunded order's `orderId`.
 
-| Attribute | |
-| --- | --- |
-| `data-consent="required"` | Nothing but the click id is stored or sent until you call `dropplink.grant()`. `dropplink.revoke()` stops and deletes everything. |
-| `data-cookie-domain=".brand.com"` | Cookies for every subdomain (e.g. the checkout on `pay.brand.com`). |
-| `data-spa="false"` | No automatic page views on route changes. |
-| `data-debug="true"` | Logs what it does to the console. |
+`warnings`: `unknown_visitor` (no visitor with that id for this app) or `unknown_click`; the order is stored
+either way. `track` retries rate limits, server errors and timeouts, then throws a `DropplinkError`. Resending
+is safe.
 
-## Checking it works
+**No script on the site?** Send the `dropp_click_id` the visitor landed with as `clickId` instead (`readClickId`).
 
-Open your site from one of your links with `data-debug="true"`. The console shows
-`[Dropplink] sent 2: 2 stored`. In the dashboard, the visitor appears under the link's creator.
+## Consent
 
-## Development
-
-```sh
-npm ci
-npm test          # vitest + jsdom
-npm run typecheck
-npm run build     # dist/dropplink.js (script tag) and dist/index.js (npm)
-npm run size
+```js
+dropplink.grant();  // start (with consent: 'required')
+dropplink.revoke(); // clear the visitor id, session, click, queue and user, and stop
 ```
 
-After a change, `../scripts/sync-web-script.sh <path to dropp-attribution>` copies the script-tag build
-into the server, which serves it at `/_d/s.js`.
+Before consent, only the click id is kept: it holds nothing about the person and is needed to credit an order.
+Cookies: `dropp_vid` (visitor id, 13 months) and `dropp_click_id` (30 days), first-party.
+
+## How it behaves
+
+- **Sessions** end after 30 minutes idle, or when the visitor lands from a new campaign.
+- **Engaged time** is time the page was visible, sent when the visitor moves on or hides the tab.
+- **Queue:** items wait in localStorage (up to 200; page views and time go first when full), are sent 2 s after
+  the last one (at once from 20), and on hide with `keepalive`. Failures retry with backoff (2 s doubling, up to
+  5 min, `Retry-After` honoured). The server de-duplicates retries.
+- **Stops** on `401` / `403` (wrong key, or a site not in the app's domains) and logs why. Automated browsers
+  (`navigator.webdriver`) send nothing.
+- **Safari** keeps script storage for 7 days. Send `visitorId` with orders and, once customers log in, their
+  credit sits on their user, not the browser.
+
+## Develop
+
+```bash
+npm install
+npm test          # Vitest: the script in jsdom, the server half against ../contract
+npm run typecheck
+npm run lint
+npm run build     # dist/: ESM, CommonJS, types and dropplink.min.js
+../scripts/sync-web-script.sh   # on release: copy the script into dropp-attribution's assets/
+```
+
+Spec: [docs/sdk-spec.md](../docs/sdk-spec.md) section 12. Wire contract: dropp-attribution `docs/web-api.md`.
