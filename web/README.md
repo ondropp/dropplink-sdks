@@ -54,6 +54,7 @@ const dropplink = init({ key: 'pk_3f9c1e2a7b6d4c80', endpoint: 'https://go.yourb
 | `consent` | `data-consent="required"` | `'granted'` | Wait for `grant()` (cookie banners) |
 | `spa` | `data-spa="false"` | `true` | Count `pushState` / `popstate` navigations |
 | `cookieDomain` | `data-cookie-domain=".yourbrand.com"` | this host | Share the visitor across subdomains |
+| `respectGlobalPrivacyControl` | `data-respect-global-privacy-control="false"` | `true` | Store and send nothing for browsers sending [GPC](../docs/consent.md#us-global-privacy-control) |
 | `debug` | `data-debug="true"` | `false` | Console logs. Never ship it on. |
 
 ## 3. Track your funnel
@@ -111,8 +112,16 @@ dropplink.grant();  // start (with consent: 'required')
 dropplink.revoke(); // clear the visitor id, session, click, queue and user, and stop
 ```
 
-Before consent, only the click id is kept: it holds nothing about the person and is needed to credit an order.
+With `consent: 'required'`, nothing is written to localStorage or cookies before `grant()`: the landing's click
+id, the session and waiting events are kept in memory and stored on `grant()`.
 Cookies: `dropp_vid` (visitor id, 13 months) and `dropp_click_id` (30 days), first-party.
+
+**Global Privacy Control:** when the visitor's browser sends GPC, the script stores nothing (and clears what an
+earlier visit stored), sends nothing, and `grant()` doesn't override it. Set `respectGlobalPrivacyControl: false`
+only if your counsel decides GPC doesn't apply to your use of Dropplink.
+
+Recipes for Google Consent Mode, OneTrust and Cookiebot: [docs/consent.md](../docs/consent.md). Everything the
+script sends and stores: [docs/privacy.md](../docs/privacy.md#web-script).
 
 ## How it behaves
 

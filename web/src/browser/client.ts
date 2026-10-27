@@ -39,6 +39,11 @@ interface QueuedItem {
   at: number;
   item: WebItem;
 }
+interface Click {
+  id: string;
+  /** When the visitor landed with it (ms). */
+  t: number;
+}
 interface Session {
   id: string;
   last: number;
@@ -76,10 +81,18 @@ export function createClient(config: WebConfig, { signal }: { signal?: AbortSign
     return NOOP;
   }
 
+  // Global Privacy Control: the visitor's browser says "don't sell or share my data" (CCPA and other US state
+  // laws treat it as a valid opt-out). Honoured unless the brand turns it off: nothing is stored or sent, and
+  // grant() can't override it, because a cookie banner's "accept" doesn't withdraw the browser's signal.
+  const gpc =
+    config.respectGlobalPrivacyControl !== false &&
+    (navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl === true;
+
   const endpoint = config.endpoint ?? DEFAULT_ENDPOINT;
   const fallback = endpoint === DEFAULT_ENDPOINT ? null : DEFAULT_ENDPOINT;
   const cookieDomain = config.cookieDomain;
-  let consented = config.consent !== 'required' || load(KEYS.consent) === 'granted';
+  let consented = !gpc && (config.consent !== 'required' || load(KEYS.consent) === 'granted');
+  if (gpc) clearStored();
   let waiting: QueuedItem[] = [];
   let stopped = false;
   let flushing: Promise<void> | null = null;
@@ -96,11 +109,13 @@ export function createClient(config: WebConfig, { signal }: { signal?: AbortSign
   }
   const hasUtm = Object.keys(utm).length > 0;
   const landingClick = isClickId(clickParam) ? clickParam : undefined;
-  // First touch: keep the first click, as the server does. Kept even before consent: it's needed to credit
-  // an order, and holds nothing about the person.
-  if (landingClick && !storedClick()) {
-    save(KEYS.click, { id: landingClick, t: Date.now() });
-    writeCookie(CLICK_PARAM, landingClick, CLICK_WINDOW_DAYS, cookieDomain);
+  // First touch: keep the first click, as the server does. Before consent it stays in memory (nothing is
+  // stored on the device until grant()) and is persisted by grant().
+  let memoryClick: Click | null = null;
+  if (landingClick && !gpc && !storedClick()) {
+    const click = { id: landingClick, t: Date.now() };
+    if (consented) persistClick(click);
+    else memoryClick = click;
   }
   // A copied URL shouldn't pass the click on. UTM tags stay for the site's own analytics.
   if (clickParam !== null) {
@@ -115,11 +130,26 @@ export function createClient(config: WebConfig, { signal }: { signal?: AbortSign
   /** The first event of this page load carries the landing's UTM tags and click. */
   let landing = true;
 
+  function persistClick(click: Click): void {
+    save(KEYS.click, click);
+    const daysLeft = CLICK_WINDOW_DAYS - (Date.now() - click.t) / 86_400_000;
+    if (daysLeft > 0) writeCookie(CLICK_PARAM, click.id, daysLeft, cookieDomain);
+  }
+
   function storedClick(): string | null {
+    if (gpc) return null;
+    if (memoryClick && Date.now() - memoryClick.t < CLICK_WINDOW_DAYS * 86_400_000) return memoryClick.id;
     const saved = load<{ id: string; t: number }>(KEYS.click);
     if (saved && isClickId(saved.id) && Date.now() - saved.t < CLICK_WINDOW_DAYS * 86_400_000) return saved.id;
     const cookie = readCookie(CLICK_PARAM);
     return isClickId(cookie) ? cookie : null;
+  }
+
+  /** Everything this script keeps on the device, except the visitor's consent answer. */
+  function clearStored(): void {
+    for (const k of [KEYS.visitor, KEYS.session, KEYS.click, KEYS.queue, KEYS.user]) remove(k);
+    clearCookie(VISITOR_COOKIE, cookieDomain);
+    clearCookie(CLICK_PARAM, cookieDomain);
   }
 
   function visitorId(): string {
@@ -134,6 +164,14 @@ export function createClient(config: WebConfig, { signal }: { signal?: AbortSign
   let memorySession: Session | null = null;
   const readSession = () => (consented ? load<Session>(KEYS.session) : memorySession);
   const writeSession = (s: Session) => (consented ? save(KEYS.session, s) : (memorySession = s));
+  // The signed-in user, also kept in memory until consent.
+  let memoryUser: string | null = null;
+  const readUser = () => (consented ? load<string>(KEYS.user) : memoryUser);
+  const writeUser = (id: string | null) => {
+    if (!consented) memoryUser = id;
+    else if (id === null) remove(KEYS.user);
+    else save(KEYS.user, id);
+  };
 
   function session(touch: boolean): { id: string; isNew: boolean } {
     const t = Date.now();
@@ -156,7 +194,8 @@ export function createClient(config: WebConfig, { signal }: { signal?: AbortSign
   const writeQueue = (items: QueuedItem[]) => save(KEYS.queue, { v: 1, items });
 
   function enqueue(item: WebItem): void {
-    if (signal?.aborted) return;
+    // Under GPC nothing will ever be sent from this page, so nothing waits either.
+    if (signal?.aborted || gpc) return;
     const entry: QueuedItem = { qid: uuid(), at: Date.now(), item };
     if (!consented) {
       waiting.push(entry);
@@ -370,21 +409,28 @@ export function createClient(config: WebConfig, { signal }: { signal?: AbortSign
         warn('identify dropped: pass your own opaque user id (1–128 chars), never an email or a phone number');
         return;
       }
-      if (load(KEYS.user) === id) return;
-      save(KEYS.user, id);
+      if (readUser() === id) return;
+      writeUser(id);
       enqueue({ type: 'identify', ts: now(), userId: id });
       log(`identify ${id}`);
     },
     logout() {
-      if (load(KEYS.user) === null) return;
-      remove(KEYS.user);
+      if (readUser() === null) return;
+      writeUser(null);
       enqueue({ type: 'identify', ts: now(), userId: null });
     },
     grant() {
+      if (gpc) {
+        log('Global Privacy Control is on in this browser: grant() ignored, nothing is stored or sent');
+        return;
+      }
       if (consented) return;
       consented = true;
       save(KEYS.consent, 'granted');
       if (memorySession) save(KEYS.session, memorySession);
+      if (memoryUser) save(KEYS.user, memoryUser);
+      if (memoryClick) persistClick(memoryClick);
+      memoryClick = null;
       visitorId();
       const held = waiting;
       waiting = [];
@@ -395,10 +441,11 @@ export function createClient(config: WebConfig, { signal }: { signal?: AbortSign
     revoke() {
       consented = false;
       waiting = [];
-      save(KEYS.consent, 'denied');
-      for (const k of [KEYS.visitor, KEYS.session, KEYS.click, KEYS.queue, KEYS.user]) remove(k);
-      clearCookie(VISITOR_COOKIE, cookieDomain);
-      clearCookie(CLICK_PARAM, cookieDomain);
+      memoryUser = null;
+      memoryClick = null;
+      // Under GPC nothing is written, not even the answer.
+      if (!gpc) save(KEYS.consent, 'denied');
+      clearStored();
       log('consent withdrawn, stored data cleared');
     },
     getVisitorId: () => (consented ? visitorId() : null),
@@ -408,6 +455,6 @@ export function createClient(config: WebConfig, { signal }: { signal?: AbortSign
 
   if (consented) visitorId();
   pageView();
-  log(`started: ${endpoint}${consented ? '' : ' (waiting for consent)'}`);
+  log(`started: ${endpoint}${gpc ? ' (Global Privacy Control: nothing stored or sent)' : consented ? '' : ' (waiting for consent)'}`);
   return client;
 }

@@ -36,6 +36,7 @@ type Globals = { dropplink?: DropplinkWeb | { q?: Queued[] }; DropplinkConfig?: 
     consent: (fromWindow.consent ?? data.consent) === 'required' ? 'required' : 'granted',
     spa: fromWindow.spa ?? data.spa !== 'false',
     cookieDomain: fromWindow.cookieDomain ?? data.cookieDomain,
+    respectGlobalPrivacyControl: fromWindow.respectGlobalPrivacyControl ?? data.respectGlobalPrivacyControl !== 'false',
     debug: fromWindow.debug ?? data.debug === 'true',
   };
 

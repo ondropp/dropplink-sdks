@@ -5,6 +5,14 @@ React Native SDKs ([docs/sdk-spec.md](../docs/sdk-spec.md)).
 
 ## Unreleased
 
+- Global Privacy Control: new option `respectGlobalPrivacyControl` (script tag:
+  `data-respect-global-privacy-control`), default `true`. When the browser sends GPC, the script clears what it
+  stored before, stores and sends nothing, and `grant()` doesn't override it.
+- With `consent: 'required'`, nothing is stored before `grant()`: the landing's click id (was saved at once as
+  `dl_click` and the `dropp_click_id` cookie) and the user id passed to `identify` (was `dl_uid`) stay in
+  memory. `grant()` persists the click with its original 30-day window; `revoke()` forgets it. The default
+  `consent: 'granted'` mode is unchanged.
+
 ## 0.2.0 - 2026-10-23
 
 First release: website behaviour and website orders (docs/sdk-spec.md section 12; wire contract:

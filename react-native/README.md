@@ -217,6 +217,13 @@ retries.
 creators must come from your server: send them to `/v1/s2s/events` from your backend when the order is
 confirmed, and use `track` in the app for the funnel (views, add to cart, checkout started).
 
+## Privacy
+
+The native SDKs do the collecting, so what's sent and stored is exactly as on Android and iOS:
+[docs/privacy.md](../docs/privacy.md). Store answers (Play Data safety, App Privacy) per feature:
+[docs/store-disclosures.md](../docs/store-disclosures.md). Consent for EU / UK users (call `initialize` only
+after consent, `setTrackingEnabled(false)` on withdrawal) and children's apps: [docs/consent.md](../docs/consent.md).
+
 ## API
 
 ```ts

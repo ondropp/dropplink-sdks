@@ -9,10 +9,17 @@ export interface WebConfig {
    */
   endpoint?: string;
   /**
-   * `'required'`: keep only the click id until you call `grant()` (for a cookie banner). Events tracked before
-   * that wait in memory (up to 50) and are sent on `grant()`. Default `'granted'`.
+   * `'required'`: store nothing on the device and send nothing until you call `grant()` (for a cookie banner).
+   * The landing's click id and events tracked before that wait in memory (up to 50) and are stored and sent on
+   * `grant()`. Default `'granted'`.
    */
   consent?: 'granted' | 'required';
+  /**
+   * Honour Global Privacy Control: when the visitor's browser sends it (`navigator.globalPrivacyControl`), the
+   * script stores nothing, sends nothing, clears what it stored before, and `grant()` doesn't override it. Set
+   * `false` only if your lawyers have decided GPC doesn't apply to your use of Dropplink. Default `true`.
+   */
+  respectGlobalPrivacyControl?: boolean;
   /** Count `pushState` / `popstate` navigations as page views (single-page apps). Default `true`. */
   spa?: boolean;
   /** Share the visitor across subdomains, e.g. `.yourbrand.com`. Default: this host only. */
@@ -31,13 +38,13 @@ export interface DropplinkWeb {
   /** Your own user id after sign-in. Unverified: shown in the visitor's journey, never used for credit. */
   identify(userId: string): void;
   logout(): void;
-  /** Consent given: starts storing and sending, including what waited. */
+  /** Consent given: starts storing and sending, including what waited. Ignored under Global Privacy Control. */
   grant(): void;
   /** Consent withdrawn: clears the visitor id, session, click, queue and user, and stops sending. */
   revoke(): void;
-  /** Send with orders as `visitorId`. `null` until consent is granted. */
+  /** Send with orders as `visitorId`. `null` until consent is granted, and under Global Privacy Control. */
   getVisitorId(): string | null;
-  /** The first Dropplink click this visitor landed with (last 30 days), or `null`. */
+  /** The first Dropplink click this visitor landed with (last 30 days), or `null` (always under Global Privacy Control). */
   getClickId(): string | null;
   /** Sends what's queued now. */
   flush(): Promise<void>;

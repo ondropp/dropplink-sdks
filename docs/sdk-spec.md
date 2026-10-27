@@ -232,7 +232,9 @@ Never log the secret, the signature or full request bodies. Device details and t
 3. **Small public surface.** Only section 2 is public. Everything else is `internal` / not exported, so it
    can change without a major version.
 4. **Unknown response fields are ignored**, so the server can add fields without breaking old SDKs.
-5. **Privacy:** no advertising ids, no contacts, no location. Only what section 4 lists.
+5. **Privacy:** no advertising ids, no contacts, no location. Only what section 4 lists. Everything an SDK
+   sends or stores is listed for brands in [privacy.md](./privacy.md); a change here updates it, and
+   [store-disclosures.md](./store-disclosures.md) and the iOS privacy manifest when a data type changes.
 6. **Semantic versioning.** Breaking a section 2 API is a major version.
 
 ## 10. Testing
@@ -368,7 +370,7 @@ contract is dropp-attribution's [web-api.md](../../dropp-attribution-server/docs
 
 **Start.** No-op without `window` (SSR), without a key matching `^pk_[a-f0-9]{16}$` (logs an error), or when
 `navigator.webdriver` is true. Config: `key`, `endpoint`, `consent` (`granted` | `required`), `spa`,
-`cookieDomain`, `debug`. The script tag reads them from `window.DropplinkConfig` or its `data-*` attributes, and
+`cookieDomain`, `respectGlobalPrivacyControl` (default `true`), `debug`. The script tag reads them from `window.DropplinkConfig` or its `data-*` attributes, and
 when served as `…/s.js` with no endpoint given, sends to `…/e` on the same origin. Calls queued before load in
 `window.dropplink.q` are replayed in order.
 
@@ -378,8 +380,8 @@ when served as `…/s.js` with no endpoint given, sends to `…/e` on the same o
 (30 days).
 
 **Landing.** UTM tags (`source`, `medium`, `campaign`, `content`, `term`, ≤ 128 chars) and `dropp_click_id` are
-read from the URL. A valid click is saved only if none is saved yet (first touch, 30 days), even before
-consent. `dropp_click_id` is then removed from the address bar with `history.replaceState`, keeping
+read from the URL. A valid click is saved only if none is saved yet (first touch, 30 days); with consent
+`required` it is held in memory until `grant()` (below). `dropp_click_id` is then removed from the address bar with `history.replaceState`, keeping
 `history.state`; UTM tags stay.
 
 **Sessions.** A session continues while the last activity is under 30 minutes old, unless this page load
@@ -397,8 +399,20 @@ PII rules), `identify(userId)` (1–128 chars, not an email or phone; sent once 
 `grant()`, `revoke()` (clears every key and both cookies), `getVisitorId()` (`null` before consent),
 `getClickId()`, `flush()`.
 
-**Consent `required`.** Until `grant()`: the session lives in memory, no visitor id is created, items wait in
-memory (the latest 50) and nothing is sent. `grant()` persists them and sends.
+**Consent `required`.** Until `grant()` nothing is written to localStorage or cookies: the session, the
+identified user id and the landing's click (or one already stored, which is read but not rewritten) live in
+memory, no visitor id is created, items wait in memory (the latest 50; the first carries the click as usual)
+and nothing is sent. `getClickId()` returns the click held in memory. `grant()` persists them (the click as
+`dl_click` with its landing time and the `dropp_click_id` cookie for the rest of its 30 days, if none is stored
+yet) and sends. `revoke()` also forgets the click held in memory. With consent `granted` the click is stored at
+once, as described under Landing.
+
+**Global Privacy Control.** Unless `respectGlobalPrivacyControl` is `false`, when `navigator.globalPrivacyControl
+=== true` the script behaves as if consent were never granted, and more strictly: on start it clears every key
+except `dl_consent` and both cookies; it stores nothing (not even the click), queues nothing, sends nothing;
+`grant()` is ignored (logged in debug mode), `revoke()` clears without writing `dl_consent`; `getVisitorId()`
+and `getClickId()` return `null`. Page views and sessions still run in memory, and `dropp_click_id` is still
+removed from the address bar. The script tag reads it as `data-respect-global-privacy-control="false"`.
 
 **Queue and sending.** At most 200 items (dropping page views and engage items first), items older than 24 h
 dropped. A flush 2 s after the last item, at once from 20 items; on hide or `pagehide`, one batch with
@@ -435,5 +449,5 @@ server's tests).
 ### Testing
 
 The script runs in jsdom against `contract/web/request.json` (shape), with a fake `fetch` and fake timers: the
-landing, first touch, sessions, SPA page views and engaged time, validation, consent, the response table and
+landing, first touch, sessions, SPA page views and engaged time, validation, consent, Global Privacy Control, the response table and
 the fallback. The server half is tested against `contract/s2s/*` and `contract/schemas/s2s-events-*.json`.

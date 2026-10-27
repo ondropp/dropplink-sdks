@@ -194,20 +194,59 @@ describe('track and identify', () => {
 });
 
 describe('consent', () => {
-  it('with consent required, keeps only the click and sends nothing until grant()', async () => {
+  it('with consent required, stores nothing (not even the click) and sends nothing until grant()', async () => {
     land(`/?dropp_click_id=${CLICK}`);
     const c = start({ consent: 'required' });
     c.track('view_item');
+    c.identify('user_8812');
     await vi.advanceTimersByTimeAsync(5_000);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(c.getVisitorId()).toBeNull();
-    expect(document.cookie).not.toContain('dropp_vid=');
+    expect(window.localStorage.length).toBe(0);
+    expect(document.cookie).not.toMatch(/dropp_(vid|click_id)=[^;]/);
+    expect(location.search).toBe('');
+    // Kept in memory for this page.
     expect(c.getClickId()).toBe(CLICK);
 
     c.grant();
+    expect(JSON.parse(window.localStorage.getItem('dl_click')!)).toEqual({ id: CLICK, t: expect.any(Number) });
+    expect(document.cookie).toContain(`dropp_click_id=${CLICK}`);
+    expect(document.cookie).toContain('dropp_vid=');
     await vi.advanceTimersByTimeAsync(0);
-    expect(items().map((i) => i.name)).toEqual(['page_view', 'view_item']);
+    expect(items().map((i) => i.name ?? i.type)).toEqual(['page_view', 'view_item', 'identify']);
+    expect(items()[0]!.clickId).toBe(CLICK);
     expect(c.getVisitorId()).toMatch(UUID);
+    expect(c.getClickId()).toBe(CLICK);
+  });
+
+  it('with consent required, revoke() before grant() forgets the click held in memory', () => {
+    land(`/?dropp_click_id=${CLICK}`);
+    const c = start({ consent: 'required' });
+    c.revoke();
+    expect(c.getClickId()).toBeNull();
+    c.grant();
+    expect(window.localStorage.getItem('dl_click')).toBeNull();
+    expect(document.cookie).not.toMatch(/dropp_click_id=[^;]/);
+  });
+
+  it('with consent required, a later page keeps the first click once granted', () => {
+    land(`/?dropp_click_id=${CLICK}`);
+    start({ consent: 'required' }).grant();
+    controller.abort();
+    controller = new AbortController();
+    land(`/?dropp_click_id=${OTHER_CLICK}`);
+    const c = start({ consent: 'required' });
+    expect(c.getClickId()).toBe(CLICK);
+  });
+
+  it('with consent required, keeps the identified user in memory until grant()', async () => {
+    const c = start({ consent: 'required' });
+    c.identify('user_8812');
+    expect(window.localStorage.getItem('dl_uid')).toBeNull();
+    c.grant();
+    expect(window.localStorage.getItem('dl_uid')).toBe('"user_8812"');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(items().filter((i) => i.type === 'identify')).toEqual([{ type: 'identify', ts: expect.any(Number), userId: 'user_8812' }]);
   });
 
   it('revoke() clears everything stored and stops sending', async () => {
@@ -220,6 +259,58 @@ describe('consent', () => {
     c.track('view_item');
     await vi.advanceTimersByTimeAsync(5_000);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('Global Privacy Control', () => {
+  const setGpc = (value: boolean | undefined) => Object.defineProperty(navigator, 'globalPrivacyControl', { value, configurable: true });
+  afterEach(() => setGpc(undefined));
+
+  it('with GPC on, stores nothing, sends nothing, and grant() does not override it', async () => {
+    setGpc(true);
+    land(`/?dropp_click_id=${CLICK}`);
+    const c = start();
+    c.track('view_item');
+    c.identify('user_8812');
+    c.grant();
+    await vi.advanceTimersByTimeAsync(5_000);
+    await c.flush();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(c.getVisitorId()).toBeNull();
+    expect(c.getClickId()).toBeNull();
+    expect(window.localStorage.length).toBe(0);
+    expect(document.cookie).not.toMatch(/dropp_(vid|click_id)=[^;]/);
+    // The click still leaves the address bar.
+    expect(location.search).toBe('');
+  });
+
+  it('with GPC on, clears what an earlier visit stored', () => {
+    land(`/?dropp_click_id=${CLICK}`);
+    start().identify('user_8812');
+    expect(window.localStorage.getItem('dl_vid')).not.toBeNull();
+    controller.abort();
+    controller = new AbortController();
+
+    setGpc(true);
+    land('/');
+    start();
+    for (const k of ['dl_vid', 'dl_sess', 'dl_click', 'dl_q', 'dl_uid']) expect(window.localStorage.getItem(k)).toBeNull();
+    expect(document.cookie).not.toMatch(/dropp_(vid|click_id)=[^;]/);
+  });
+
+  it('is ignored when the brand sets respectGlobalPrivacyControl: false', async () => {
+    setGpc(true);
+    const c = start({ respectGlobalPrivacyControl: false });
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(items().map((i) => i.name)).toEqual(['page_view']);
+    expect(c.getVisitorId()).toMatch(UUID);
+  });
+
+  it('with GPC off (false or absent), behaves as before', async () => {
+    setGpc(false);
+    start();
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

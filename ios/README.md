@@ -301,9 +301,14 @@ are kept in `Application Support/Dropplink/dropplink-queue.json`, excluded from 
 `setTrackingEnabled(false)` deletes them and stops sending.
 
 `PrivacyInfo.xcprivacy` is bundled: `NSPrivacyTracking = false`, UserDefaults access with reason `CA92.1`,
-the install id declared as a Device ID (analytics, not linked to the user), and User ID, Email Address,
-Phone Number, Product Interaction and Purchase History (analytics, linked to the user, not tracking) for
-apps that use `identify` and `track`. Reflect what your app actually sends in your App Store privacy details.
+the install id declared as a Device ID (analytics and app functionality, linked to the user, not tracking),
+and User ID, Email Address, Phone Number, Product Interaction and Purchase History (analytics, linked to the
+user, not tracking) for apps that use `identify` and `track`. `NSPrivacyTracking = false` holds only while the
+server's IP + device matching is off for your iOS app.
+
+Full list of what is sent and stored, and retention: [docs/privacy.md](../docs/privacy.md). App Store privacy
+answers per feature: [docs/store-disclosures.md](../docs/store-disclosures.md). Consent (EU / UK, children):
+[docs/consent.md](../docs/consent.md).
 
 ## Developing the SDK
 

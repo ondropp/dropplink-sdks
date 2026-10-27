@@ -301,6 +301,13 @@ in `dropplink-queue.json`, both in `Context.noBackupFilesDir`. That folder
 is never included in Auto Backup, so a restored phone gets a new install id and you don't need to edit your
 backup rules. The secret is never stored by the SDK.
 
+Permissions: `INTERNET`, plus `BIND_GET_INSTALL_REFERRER_SERVICE` from the Play Install Referrer library. No
+`AD_ID`.
+
+Full list of what is sent and stored, and retention: [docs/privacy.md](../docs/privacy.md). Play Data safety
+answers per feature: [docs/store-disclosures.md](../docs/store-disclosures.md). Consent (EU / UK, children):
+[docs/consent.md](../docs/consent.md).
+
 ## Developing the SDK
 
 ```sh

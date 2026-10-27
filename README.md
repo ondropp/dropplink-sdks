@@ -34,6 +34,9 @@ that brought them, and open deep links, and to their websites so orders placed t
 contract/           wire fixtures from dropp-attribution (don't edit by hand)
 docs/
   sdk-spec.md       public API and behaviour, shared by every SDK
+  privacy.md        what the SDKs collect and store, retention, roles
+  store-disclosures.md  Play Data safety and App Privacy answers
+  consent.md        consent banners, GPC, children's apps
   releasing.md      versioning and publishing
 android/            Gradle project: :dropplink library + :sample app
 ios/                Swift package + Dropplink.podspec
@@ -56,6 +59,18 @@ Each folder is self-contained and has its own README with build and test command
 | Flutter | `cd flutter && flutter test` |
 | React Native | `cd react-native && npm test` |
 | Web | `cd web && npm test` |
+
+## Privacy and consent
+
+The SDKs collect no advertising ids, contacts or location; emails and phone numbers given to `identify` are
+hashed on the device. Dropp processes end-user data as the brand's processor / service provider.
+
+- [docs/privacy.md](./docs/privacy.md): every field each SDK sends and when, what it stores on the device
+  (files, keys, cookies), what it never collects, retention on our side, and roles.
+- [docs/store-disclosures.md](./docs/store-disclosures.md): Google Play Data safety and Apple App Privacy
+  answers, per SDK feature.
+- [docs/consent.md](./docs/consent.md): EU / UK consent (web `consent: 'required'` with Google Consent Mode,
+  OneTrust and Cookiebot; mobile `initialize` after consent), Global Privacy Control, children's apps.
 
 ## For brands
 
