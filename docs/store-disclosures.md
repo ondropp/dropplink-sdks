@@ -24,6 +24,7 @@ This is not legal advice.
 | `identify(userId)` | User IDs | Identifiers → User ID |
 | `identify(..., email)` | Email address | Contact Info → Email Address |
 | `identify(..., phone)` | Phone number | Contact Info → Phone Number |
+| The SDK at all (our server looks up country, region and city from the request) | Approximate location | Location → Coarse Location |
 
 **Why "App interactions" / "Product Interaction" even without `track`:** every launch sends `/v1/init`, which
 tells our server the app was opened, and `handleDeepLink` reports which link opened it. Both stores' examples
@@ -33,8 +34,12 @@ of these types include app launches and taps. Declaring them is the safer answer
 hash of an email address identifies the same person to anyone who hashes the same address. Both stores treat
 it as collecting that data type. Declare Email address / Phone number if you pass them.
 
-**Not collected by the SDK, so not declared for it:** location (the server sees the IP address but only stores
-a daily-salted hash of it and doesn't derive a location from it), contacts, advertising id, crash logs,
+**Approximate location counts.** Our server never stores the IP address (only a daily-salted hash), but it
+records the country, region and city that the request comes from (Cloudflare's location headers). Both stores
+count location derived from an IP address as approximate / coarse location, so declare it.
+
+**Not collected by the SDK, so not declared for it:** precise location (GPS, Wi-Fi, Bluetooth), contacts,
+advertising id, crash logs,
 diagnostics, photos, health, financial info. Device model, OS version, locale, time zone and screen size are
 not a data type of their own in either form; they're covered by the answers above.
 
@@ -62,6 +67,7 @@ network or your creators, that is sharing and you must declare it.) **Processed 
 | **User IDs** (Personal info) | You call `identify` | As for events | Analytics; Advertising or marketing |
 | **Email address** (Personal info) | You pass `email` to `identify` | As for events | Analytics; Advertising or marketing |
 | **Phone number** (Personal info) | You pass `phone` to `identify` | As for events | Analytics; Advertising or marketing |
+| **Approximate location** (Location) | Always (country, region and city from the request) | Required, unless you only call `initialize` after the user opts in | Analytics; Advertising or marketing |
 
 **Advertising or marketing**: Google's definition includes "measure ad performance". Dropplink's purpose is
 to measure which links, creators and campaigns bring installs, users and orders, which is measuring marketing
@@ -88,6 +94,7 @@ uses (table at the top).
 | **Identifiers → User ID** | You call `identify` | **Yes** | **No** | Analytics |
 | **Contact Info → Email Address** | You pass `email` | **Yes** | **No** | Analytics |
 | **Contact Info → Phone Number** | You pass `phone` | **Yes** | **No** | Analytics |
+| **Location → Coarse Location** | Always (country, region and city from the request) | **Yes** | **No** | Analytics |
 
 **Linked to the user: yes.** The install id is a stable per-install identifier and `identify` ties it to your
 user id, so everything sent with it can be connected to the person. Apple counts data as linked unless it is

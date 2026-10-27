@@ -34,7 +34,8 @@ By any SDK, on any platform:
 
 - Advertising identifiers (IDFA, Google Advertising ID / `AD_ID`), the iOS vendor id (IDFV), `ANDROID_ID`,
   IMEI, serial numbers, MAC addresses.
-- Contacts, location (GPS, Wi-Fi, Bluetooth), photos, health, financial account data.
+- Contacts, precise location (GPS, Wi-Fi, Bluetooth), photos, health, financial account data. (Our server
+  records the country, region and city a request comes from, from Cloudflare's headers; never the IP itself.)
 - Plain email addresses or phone numbers: `identify` hashes them on the device (SHA-256) and the plain values
   are never sent or stored. Event props and user ids that look like an email or a phone number are dropped by
   the SDK before sending (and again by the server).

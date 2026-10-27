@@ -292,7 +292,7 @@ your link domain, and that `onContinueUserActivity` / `scene(_:continue:)` forwa
 
 For install attribution the SDK sends only: a random install id (created by the SDK, not an advertising or
 vendor id), app and SDK version, device model, OS version, locale, time zone and screen size. No IDFA, no
-contacts, no location, no tracking. It stores the install id, last attribution and the
+contacts, no precise location (the server records country, region and city), no tracking. It stores the install id, last attribution and the
 `setTrackingEnabled` choice in `UserDefaults(suiteName: "app.ondropp.dropplink")`.
 
 If you call `track` / `identify`, it also sends the events and props you pass, your user id and SHA-256
@@ -302,7 +302,7 @@ are kept in `Application Support/Dropplink/dropplink-queue.json`, excluded from 
 
 `PrivacyInfo.xcprivacy` is bundled: `NSPrivacyTracking = false`, UserDefaults access with reason `CA92.1`,
 the install id declared as a Device ID (analytics and app functionality, linked to the user, not tracking),
-and User ID, Email Address, Phone Number, Product Interaction and Purchase History (analytics, linked to the
+and Coarse Location, User ID, Email Address, Phone Number, Product Interaction and Purchase History (analytics, linked to the
 user, not tracking) for apps that use `identify` and `track`. `NSPrivacyTracking = false` holds only while the
 server's IP + device matching is off for your iOS app.
 

@@ -62,7 +62,7 @@ Each folder is self-contained and has its own README with build and test command
 
 ## Privacy and consent
 
-The SDKs collect no advertising ids, contacts or location; emails and phone numbers given to `identify` are
+The SDKs collect no advertising ids, contacts or precise location (the server records country, region and city); emails and phone numbers given to `identify` are
 hashed on the device. Dropp processes end-user data as the brand's processor / service provider.
 
 - [docs/privacy.md](./docs/privacy.md): every field each SDK sends and when, what it stores on the device

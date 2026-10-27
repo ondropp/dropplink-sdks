@@ -22,7 +22,7 @@ In-app events, revenue and users (spec §11).
   Network errors, `429` and `5xx` back off 1 s → 5 min (± 20%, honouring `Retry-After`) for as long as the
   app runs; `404 unknown_install` re-runs init; `400` drops the batch. At most 1,000 events / 1 MB, oldest
   non-revenue events dropped first; events older than 7 days are dropped.
-- Privacy manifest declares User ID, Email Address, Phone Number, Product Interaction and Purchase History
+- Privacy manifest declares Coarse Location, User ID, Email Address, Phone Number, Product Interaction and Purchase History
   (analytics, linked, not tracking). The install id's Device ID entry is now linked to the user (it is, once
   `identify` runs) and adds the App Functionality purpose (deep links).
 - `sdkVersion` is now `0.2.0`.

@@ -292,7 +292,7 @@ and that `assetlinks.json` lists your signing certificate.
 
 The SDK sends only: a random install id (created by the SDK, not an advertising or Android id), app and SDK
 version, device model, OS version, locale, time zone, screen size and, until attributed, the Play Install
-Referrer. No advertising id, no contacts, no location. With events, it also sends what you pass to
+Referrer. No advertising id, no contacts, no precise location (the server records country, region and city). With events, it also sends what you pass to
 `track` and `identify`; emails and phone numbers given to `identify` are SHA-256 hashed on the device and
 never stored or sent in plain text.
 
