@@ -1,10 +1,10 @@
 # Dropplink iOS SDK
 
-Install attribution and deep links for apps promoted with Dropp links:
+Install attribution and deep links for apps promoted with Dropplink links:
 
-- Attributes each install to the Dropp link that drove it.
+- Attributes each install to the Dropplink link that drove it.
 - Delivers the **deferred deep link** after a fresh install, so the first launch opens the right screen.
-- Resolves **Universal Link** opens of Dropp links into the same deep link format.
+- Resolves **Universal Link** opens of Dropplink links into the same deep link format.
 - Sends **in-app events** and links your **users** to their install, through an on-disk queue that
   survives being offline or killed.
 
@@ -43,7 +43,7 @@ pod 'Dropplink', '~> 0.2.0'
 
 ## Keys
 
-Create an **iOS** SDK key for your app in the Dropp dashboard. You get a key id (`ak_…`) and a secret.
+Create an **iOS** SDK key for your app in the Dropplink dashboard. You get a key id (`ak_…`) and a secret.
 Use the iOS key: an Android key fails with `platform_mismatch`.
 
 Keep them out of source code. Put them in an xcconfig that isn't committed and read them through
@@ -116,10 +116,10 @@ held in memory and delivered when you set it, so it's fine to set the listener o
 
 ## Universal Links
 
-When the app is already installed, tapping a Dropp link opens the app directly. Forward that URL to the
+When the app is already installed, tapping a Dropplink link opens the app directly. Forward that URL to the
 SDK so it can resolve the link's deep link path and record the open.
 
-1. Register your link domain (e.g. `go.brand.com`) for the app in the Dropp dashboard. Dropp serves the
+1. Register your link domain (e.g. `go.brand.com`) for the app in the Dropplink dashboard. Dropplink serves the
    `apple-app-site-association` file for it.
 2. Target → **Signing & Capabilities → + Associated Domains** → add `applinks:go.brand.com`.
 3. Forward opens:
@@ -150,7 +150,7 @@ func application(_ application: UIApplication, continue userActivity: NSUserActi
 }
 ```
 
-`handleDeepLink` ignores URLs that aren't `http(s)` and links that aren't Dropp links for your app (the
+`handleDeepLink` ignores URLs that aren't `http(s)` and links that aren't Dropplink links for your app (the
 listener isn't called), so you can forward every URL your app receives. Links reported before init
 finishes are sent right after it.
 
@@ -258,12 +258,12 @@ so it's available immediately on later launches.
    Dropplink: init 200 attributed via fingerprint, link 6711a0…, deep link /product/123
    ```
 
-2. Paste the install id into **Dropp dashboard → Install debugger** to see the device's inits, its
+2. Paste the install id into **Dropplink dashboard → Install debugger** to see the device's inits, its
    attribution and the click it matched.
-3. Deferred deep link: delete the app, tap a Dropp link in Safari on the same network, install and launch
+3. Deferred deep link: delete the app, tap a Dropplink link in Safari on the same network, install and launch
    from Xcode. The first init attributes the install (by fingerprint) and the listener receives the link
    with `isDeferred == true`.
-4. Universal Link: with the app installed, tap a Dropp link in Notes or Messages (typing it into Safari's
+4. Universal Link: with the app installed, tap a Dropplink link in Notes or Messages (typing it into Safari's
    address bar doesn't trigger Universal Links). The listener receives it with `isDeferred == false`.
 
 ## Troubleshooting

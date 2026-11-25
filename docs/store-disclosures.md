@@ -51,11 +51,11 @@ not a data type of their own in either form; they're covered by the answers abov
 | --- | --- |
 | Does your app collect or share any of the required user data types? | **Yes** |
 | Is all of the user data collected by your app encrypted in transit? | **Yes** (HTTPS only; `baseUrl` with `http://` is for local testing and must never ship) |
-| Do you provide a way for users to request that their data is deleted? | **Yes**, if you offer a deletion request (account deletion or a support contact) and pass it on with `deleteUser(userId)` or to Dropp support. See [privacy.md → Deletion](./privacy.md#deletion). |
+| Do you provide a way for users to request that their data is deleted? | **Yes**, if you offer a deletion request (account deletion or a support contact) and pass it on with `deleteUser(userId)` or to Dropplink support. See [privacy.md → Deletion](./privacy.md#deletion). |
 
 ### Per data type
 
-For every type below: **Collected: yes. Shared: no.** Dropp receives the data as your service provider, which
+For every type below: **Collected: yes. Shared: no.** Dropplink receives the data as your service provider, which
 Google's definition excludes from "sharing". (If *you* send this data on to someone else, such as an ad
 network or your creators, that is sharing and you must declare it.) **Processed ephemerally: no.**
 
@@ -107,7 +107,7 @@ linked to an identity; we recommend "Yes".
 1. **The server's IP + device matching (fingerprinting) is off for your iOS app.** Apple forbids
    fingerprinting whatever the user answers to App Tracking Transparency, and attributing an install to a
    click made in a browser or another app by matching IP and device details is the kind of linking Apple
-   describes. It is a server setting, not in the SDK. Confirm it with Dropp before you submit. See
+   describes. It is a server setting, not in the SDK. Confirm it with Dropplink before you submit. See
    [privacy.md](./privacy.md#install-matching-by-ip-and-device-fingerprinting).
 2. You don't send Dropplink data (install id, user id, email / phone hashes) to ad networks or data brokers,
    or combine it with data from other companies' apps and websites for advertising.
@@ -129,6 +129,6 @@ adding "Developer's Advertising or Marketing" is harmless over-disclosure. Never
 | You only call `initialize` after the user opts in (e.g. EU / UK, see [consent.md](./consent.md)) | On Play every type may be marked **optional**, if every user gets the choice. |
 | Fingerprinting on for your Android app | No new data type (the server uses the IP and the device fields already declared). Keep **Advertising or marketing** ticked. |
 | Fingerprinting on for your iOS app | Not compatible with Apple's rules. Turn it off. |
-| Your server sends phone numbers or other data to Dropplink (server-side events, messaging contacts) | Both forms ask about data collected **from the app**. If your app collected it, you already declare it for your own use; Dropp receiving it as your service provider doesn't make it "shared". Data your app never collected isn't part of these forms. |
+| Your server sends phone numbers or other data to Dropplink (server-side events, messaging contacts) | Both forms ask about data collected **from the app**. If your app collected it, you already declare it for your own use; Dropplink receiving it as your service provider doesn't make it "shared". Data your app never collected isn't part of these forms. |
 | An app directed at children | Don't use `identify` or `track`; keep fingerprinting off. See [consent.md](./consent.md#apps-for-children). |
 | Flutter / React Native | Same answers: they use the native SDKs. |

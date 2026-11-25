@@ -12,14 +12,14 @@ to keep in sync.
    `DropplinkExample/`.
 3. **File → Add Package Dependencies… → Add Local…** and pick this repo's `ios/` folder. Add the
    `Dropplink` library to the app target.
-4. Keys: copy `Dropplink.xcconfig.example` to `Dropplink.xcconfig`, fill in the **iOS** key from the Dropp
+4. Keys: copy `Dropplink.xcconfig.example` to `Dropplink.xcconfig`, fill in the **iOS** key from the Dropplink
    dashboard, set it as the base configuration for Debug and Release (Project → Info → Configurations),
    and add the two keys from `Info.plist.snippet.xml` to the target's Info.
 5. Universal Links: target → **Signing & Capabilities → + Associated Domains** →
-   `applinks:go.yourbrand.com` (your Dropp link domain). Needs a real team id and the domain registered in
-   the Dropp dashboard.
+   `applinks:go.yourbrand.com` (your Dropplink link domain). Needs a real team id and the domain registered in
+   the Dropplink dashboard.
 6. Run. With `debug: true`, Console.app (filter `subsystem:app.ondropp.dropplink`) shows the install id
-   and the init result. Paste the install id into **Dropp dashboard → Install debugger**.
+   and the init result. Paste the install id into **Dropplink dashboard → Install debugger**.
 
 To test against a local server, pass `baseURL: URL(string: "http://localhost:4100")!` in
 `DropplinkExampleApp.swift`. The simulator reaches the Mac's `localhost` directly; plain `http` needs an

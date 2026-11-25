@@ -1,11 +1,11 @@
 # Dropplink Android SDK
 
-Install attribution and deep links for apps promoted with Dropp links:
+Install attribution and deep links for apps promoted with Dropplink links:
 
-- Attributes each install to the Dropp link that drove it (Play Install Referrer, with fingerprint fallback
+- Attributes each install to the Dropplink link that drove it (Play Install Referrer, with fingerprint fallback
   on the server).
 - Delivers the **deferred deep link** after a fresh install, so the first launch opens the right screen.
-- Resolves **App Link** opens of Dropp links into the same deep link format.
+- Resolves **App Link** opens of Dropplink links into the same deep link format.
 - Records **in-app events** and links your **users** to the install, so the funnel after an install is
   credited to the creator who drove it.
 
@@ -37,7 +37,7 @@ nothing is needed in your `proguard-rules.pro`.
 
 ### 2. Put your keys in BuildConfig
 
-Create an **Android** SDK key for your app in the Dropp dashboard. You get a key id (`ak_…`) and a secret.
+Create an **Android** SDK key for your app in the Dropplink dashboard. You get a key id (`ak_…`) and a secret.
 Use the Android key: an iOS key fails with `platform_mismatch`.
 
 Keep them out of source control. Put them in `local.properties` (already gitignored) or
@@ -107,12 +107,12 @@ listener later, once your router exists.
 
 ### 4. Forward App Links
 
-When the app is already installed, tapping a Dropp link opens the app directly. Forward that URL to the SDK
+When the app is already installed, tapping a Dropplink link opens the app directly. Forward that URL to the SDK
 so it can resolve the link's deep link path and record the open.
 
-1. In the Dropp dashboard, register your link domain (e.g. `go.brand.com`) and your app's **SHA-256 signing
+1. In the Dropplink dashboard, register your link domain (e.g. `go.brand.com`) and your app's **SHA-256 signing
    certificates** (Play Console → App integrity → App signing key certificate, plus your debug/upload keys
-   for testing). Dropp serves `/.well-known/assetlinks.json` for the domain from them.
+   for testing). Dropplink serves `/.well-known/assetlinks.json` for the domain from them.
 2. Add an intent filter to your launcher activity:
 
    ```xml
@@ -147,7 +147,7 @@ so it can resolve the link's deep link path and record the open.
    }
    ```
 
-`handleDeepLink` ignores URLs that aren't `http(s)` and links that aren't Dropp links for your app (the
+`handleDeepLink` ignores URLs that aren't `http(s)` and links that aren't Dropplink links for your app (the
 listener isn't called), so you can forward every URL your app receives. Links reported before init finishes
 are sent right after it.
 
@@ -250,13 +250,13 @@ once it runs.
    Dropplink: init 200 attributed via install_referrer, link 6711a0…, deep link /product/123
    ```
 
-2. Paste the install id into **Dropp dashboard → Install debugger** to see the device's inits, its
+2. Paste the install id into **Dropplink dashboard → Install debugger** to see the device's inits, its
    attribution and the click it matched.
-3. Deferred deep link: uninstall the app, tap a Dropp link on the device, then install and launch. With a
+3. Deferred deep link: uninstall the app, tap a Dropplink link on the device, then install and launch. With a
    Play Store install the Install Referrer carries the click (`method = install_referrer`); a sideloaded or
    Android Studio install has no referrer and falls back to fingerprint matching on the same network. The
    listener receives the link with `isDeferred == true`.
-4. App Link: with the app installed, tap a Dropp link in a chat or notes app. The listener receives it with
+4. App Link: with the app installed, tap a Dropplink link in a chat or notes app. The listener receives it with
    `isDeferred == false`. Check verification with
    `adb shell pm get-app-links <your.package>` (Android 12+) — the domain should show `verified`.
 

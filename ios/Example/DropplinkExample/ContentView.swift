@@ -10,7 +10,7 @@ struct ContentView: View {
     var body: some View {
         NavigationView {
             List {
-                Section(header: Text("Install id"), footer: Text("Paste into Dropp dashboard → Install debugger.")) {
+                Section(header: Text("Install id"), footer: Text("Paste into Dropplink dashboard → Install debugger.")) {
                     Text(installId ?? "not initialized")
                         .font(.system(.footnote, design: .monospaced))
                         .contextMenu {
@@ -57,7 +57,7 @@ struct ContentView: View {
                         row("deferred", link.isDeferred ? "yes" : "no")
                         row("url", link.url?.absoluteString)
                     } else {
-                        Text("Open a Dropp link to see it here").foregroundColor(.secondary)
+                        Text("Open a Dropplink link to see it here").foregroundColor(.secondary)
                     }
                 }
             }

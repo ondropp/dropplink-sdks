@@ -103,7 +103,7 @@ struct APIClient: Sendable {
         case (401, "invalid_key"):
             log.error("""
                 \(path) 401 invalid_key. ⚠️ The key \(config.keyId) is unknown or revoked, or its app was \
-                deleted. Check the keyId and secret in the Dropp dashboard. Dropplink is off until next launch.
+                deleted. Check the keyId and secret in the Dropplink dashboard. Dropplink is off until next launch.
                 """)
         case (400, "platform_mismatch"):
             log.error("\(path) 400 platform_mismatch. This is an android key, used in an ios app. Use the iOS key from the dashboard.")

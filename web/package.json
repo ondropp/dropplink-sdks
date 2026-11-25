@@ -49,7 +49,7 @@
     "url": "git+https://github.com/ondropp/dropplink-sdks.git",
     "directory": "web"
   },
-  "author": "Dropp",
+  "author": "Dropplink",
   "license": "MIT",
   "homepage": "https://github.com/ondropp/dropplink-sdks/tree/main/web#readme",
   "publishConfig": {

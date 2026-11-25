@@ -50,7 +50,7 @@
     "url": "git+https://github.com/ondropp/dropplink-sdks.git",
     "directory": "react-native"
   },
-  "author": "Dropp",
+  "author": "Dropplink",
   "license": "MIT",
   "homepage": "https://github.com/ondropp/dropplink-sdks/tree/main/react-native#readme",
   "publishConfig": {

@@ -20,7 +20,7 @@ and [consent.md](./consent.md) (wiring the SDKs to a consent banner, GPC, childr
 - **The brand** (you) decides to measure which links, creators and campaigns bring installs, visits and
   orders, chooses which SDK features to use and what to pass to them, and talks to its users. For your end
   users' data you are the **controller** (GDPR / UK GDPR) or the **business** (CCPA and other US state laws).
-- **Dropp** processes that data on your behalf and only on your instructions, to give you attribution and
+- **Dropplink** processes that data on your behalf and only on your instructions, to give you attribution and
   analytics for your own app and website. For end-user data we are a **processor** / **service provider**: we
   don't sell it, don't share it for cross-context behavioural advertising, and don't combine one brand's
   end-user data with another's. The details are in the data processing agreement you sign with us.
@@ -189,4 +189,4 @@ server can fall back to matching it with a recent click by hashed IP address and
   clears every key and both cookies.
 - **Anonymous installs and visitors** (no `identify`): the SDKs have no deletion call by install id or visitor
   id yet. Their data expires under the retention above; for an individual request in the meantime, contact
-  Dropp support with the install id (`getInstallId()`) or visitor id.
+  Dropplink support with the install id (`getInstallId()`) or visitor id.

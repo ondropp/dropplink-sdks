@@ -1,15 +1,15 @@
 Pod::Spec.new do |s|
   s.name             = 'Dropplink'
   s.version          = '0.2.0'
-  s.summary          = 'Install attribution, deferred deep links and in-app events for apps using Dropp links.'
+  s.summary          = 'Install attribution, deferred deep links and in-app events for apps using Dropplink links.'
   s.description      = <<-DESC
-    Dropplink attributes app installs to the Dropp link that drove them, delivers deferred deep links
+    Dropplink attributes app installs to the Dropplink link that drove them, delivers deferred deep links
     after a fresh install, resolves Universal Link opens and sends in-app events and user identify
     through an offline-safe queue. No third-party dependencies.
   DESC
   s.homepage         = 'https://ondropp.app'
-  s.license          = { :type => 'Proprietary', :text => 'Copyright Dropp. All rights reserved.' }
-  s.author           = { 'Dropp' => 'sdk@ondropp.app' }
+  s.license          = { :type => 'Proprietary', :text => 'Copyright Dropp Services Private Limited. All rights reserved.' }
+  s.author           = { 'Dropplink' => 'sdk@ondropp.app' }
   # Placeholder: the real repository URL and tag are set at release time (docs/releasing.md).
   s.source           = { :git => 'https://github.com/ondropp/dropplink-sdks.git', :tag => "ios-v#{s.version}" }
 

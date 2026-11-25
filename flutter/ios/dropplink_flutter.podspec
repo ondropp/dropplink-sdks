@@ -11,7 +11,7 @@ Flutter plugin for Dropplink. A thin bridge: all logic lives in the native Dropp
                        DESC
   s.homepage         = 'https://ondropp.app'
   s.license          = { :file => '../LICENSE' }
-  s.author           = 'Dropp'
+  s.author           = 'Dropplink'
   s.source           = { :path => '.' }
   s.source_files     = 'Classes/**/*'
   s.dependency 'Flutter'

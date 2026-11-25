@@ -211,7 +211,7 @@ is turned off; it disappears when the app is uninstalled.
 ## US: Global Privacy Control
 
 California (CCPA / CPRA) and several other US states recognise **Global Privacy Control** (GPC), a browser
-signal (`navigator.globalPrivacyControl`) meaning "don't sell or share my personal information". Dropp acts
+signal (`navigator.globalPrivacyControl`) meaning "don't sell or share my personal information". Dropplink acts
 as your service provider and doesn't sell or share your visitors' data, but the safer default is to stop
 collecting for visitors who send it.
 
@@ -241,4 +241,4 @@ under 16 in parts of the EU, under 18 in India under the DPDP Act), or in the pa
 used by children, and keep the server's IP + device matching off for it. Install attribution and deep links
 then send only the random install id and the device fields in [privacy.md](./privacy.md). Whether even that
 is acceptable for your audience, and what Google Play's Families policy and Apple's Kids category require of
-you, is for your counsel. Tell Dropp if an app is directed at children.
+you, is for your counsel. Tell Dropplink if an app is directed at children.

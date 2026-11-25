@@ -86,7 +86,7 @@ publishing {
                 developers {
                     developer {
                         id.set("ondropp")
-                        name.set("Dropp")
+                        name.set("Dropplink")
                         email.set("dev@ondropp.app")
                     }
                 }
