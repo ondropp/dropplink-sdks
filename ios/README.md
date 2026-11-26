@@ -324,11 +324,10 @@ validation, and cover the retry rules and the event queue with a fake HTTP layer
 
 `pod lib lint Dropplink.podspec --allow-warnings` validates the CocoaPods build.
 
-Release note: this package lives in `ios/` of a monorepo. SwiftPM resolves a remote package from the
-repository root and CocoaPods trunk resolves podspec paths from the repository root, so publishing needs
-either a root-level `Package.swift` / `Dropplink.podspec` pointing at `ios/Sources/Dropplink`, or a mirror
-repository containing just `ios/`. Local installs (`Add Local…`, `pod 'Dropplink', :path => '…/ios'`) work
-as is.
+Release note: this package lives in `ios/` of a monorepo. SwiftPM and CocoaPods trunk resolve from the
+repository root, so the root `Package.swift` and `Dropplink.podspec` point at `ios/Sources/Dropplink` and
+are what gets published (docs/releasing.md). Local installs (`Add Local…`, `pod 'Dropplink', :path =>
+'…/ios'`) use the files in `ios/`.
 
 Layout of `Sources/Dropplink/`:
 

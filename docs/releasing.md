@@ -13,7 +13,7 @@ The version appears in:
 | File | Field |
 | --- | --- |
 | `android/gradle.properties` (or the library's build file) | `VERSION_NAME`, and `Dropplink.VERSION` |
-| `ios/Sources/Dropplink/Dropplink.swift`, `ios/Dropplink.podspec` | `version` |
+| `ios/Sources/Dropplink/Dropplink.swift`, `Dropplink.podspec`, `ios/Dropplink.podspec` | `version` |
 | `flutter/pubspec.yaml`, `flutter/android/build.gradle`, `flutter/ios/dropplink_flutter.podspec` | package version and the native dependency versions |
 | `react-native/package.json`, `react-native/android/build.gradle`, `react-native/*.podspec` | package version and the native dependency versions |
 | `web/package.json`, `web/src/version.ts` | `version` and `VERSION` (a test checks they match) |
@@ -28,7 +28,10 @@ The version appears in:
 5. Publish, native first, because the wrappers depend on them:
    1. Android → Maven Central: `cd android && ./gradlew :dropplink:publish` (signing keys and Sonatype
       credentials from CI secrets), then release the staging repository.
-   2. iOS → CocoaPods trunk: `pod trunk push ios/Dropplink.podspec`. SPM needs only the tag.
+   2. iOS → CocoaPods trunk, from the repository root: `pod trunk push Dropplink.podspec --allow-warnings`.
+      SPM needs only the tag: it reads the root `Package.swift`, which points at `ios/Sources/Dropplink`.
+      Both root files exist because SwiftPM and trunk resolve from the root; `ios/` keeps its own for
+      tests and `:path =>` installs.
    3. Flutter → pub.dev: `cd flutter && dart pub publish`.
    4. React Native → npm: `cd react-native && npm publish --access public`.
    5. Web → npm: `cd web && npm publish --access public`. Then `scripts/sync-web-script.sh` copies the

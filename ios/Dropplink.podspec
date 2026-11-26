@@ -10,8 +10,8 @@ Pod::Spec.new do |s|
   s.homepage         = 'https://ondropp.app'
   s.license          = { :type => 'Proprietary', :text => 'Copyright Dropp Services Private Limited. All rights reserved.' }
   s.author           = { 'Dropplink' => 'sdk@ondropp.app' }
-  # Placeholder: the real repository URL and tag are set at release time (docs/releasing.md).
-  s.source           = { :git => 'https://github.com/ondropp/dropplink-sdks.git', :tag => "ios-v#{s.version}" }
+  # The tag is the shared release tag (docs/releasing.md).
+  s.source           = { :git => 'https://github.com/ondropp/dropplink-sdks.git', :tag => "v#{s.version}" }
 
   s.ios.deployment_target = '13.0'
   s.swift_versions   = ['5.9', '6.0']
