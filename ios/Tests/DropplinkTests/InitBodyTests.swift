@@ -11,7 +11,8 @@ final class InitBodyTests: XCTestCase {
             appVersion: try XCTUnwrap(fixture["appVersion"] as? String),
             sdkVersion: try XCTUnwrap(fixture["sdkVersion"] as? String),
             device: DeviceInfo(model: device["model"] as! String, osVersion: device["osVersion"] as! String,
-                               locale: device["locale"] as! String, timezone: device["timezone"] as! String, screen: nil)
+                               locale: device["locale"] as! String, timezone: device["timezone"] as! String, screen: nil),
+            reinstallKey: try XCTUnwrap(fixture["reinstallKey"] as? String)
         )
         let encoded = try JSONSerialization.jsonObject(with: APIClient.makeEncoder().encode(body)) as? NSDictionary
         XCTAssertEqual(encoded, fixture as NSDictionary)
@@ -31,11 +32,18 @@ final class InitBodyTests: XCTestCase {
         XCTAssertEqual(sent["platform"] as? String, "ios")
         XCTAssertEqual(sent["sdkVersion"] as? String, "0.2.0")
         XCTAssertEqual(sent["installId"] as? String, harness.core.installId)
+        XCTAssertEqual(sent["reinstallKey"] as? String, TestHarness.reinstallKey)
 
         let screen = try XCTUnwrap((sent["device"] as? [String: Any])?["screen"] as? [String: Any])
         XCTAssertEqual(screen["w"] as? Int, 1179)
         XCTAssertEqual(screen["h"] as? Int, 2556)
         XCTAssertEqual(screen["dpr"] as? Double, 3)
+    }
+
+    func testReinstallKeyIsLeftOutWhenTheKeychainHasNone() throws {
+        let body = InitBody(installId: "x", appVersion: "1", sdkVersion: "0.2.0", device: TestHarness.device)
+        let encoded = try XCTUnwrap(JSONSerialization.jsonObject(with: APIClient.makeEncoder().encode(body)) as? [String: Any])
+        XCTAssertNil(encoded["reinstallKey"])
     }
 
     func testWrapperSuffixesTheSDKVersion() {

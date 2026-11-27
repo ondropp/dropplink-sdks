@@ -174,6 +174,8 @@ struct TestHarness {
     let core: DropplinkCore
     let queue = DispatchQueue(label: "dropplink.tests.delivery")
 
+    /// The contract fixture's key (`init/request.ios.json`); tests never touch the real Keychain.
+    static let reinstallKey = "5f2c9a7e-1b3d-4e6f-8a0b-2c4d6e8f0a1b"
     static let device = DeviceInfo(model: "iPhone15,2", osVersion: "18.1", locale: "en-IN",
                                    timezone: "Asia/Kolkata", screen: .init(w: 1179, h: 2556, dpr: 3))
     static let config = DropplinkConfig(keyId: "ak_3f9c1e2a7b6d4c80", secret: "test-secret", debug: true,
@@ -197,6 +199,7 @@ struct TestHarness {
             scheduler: scheduler,
             deviceInfo: { TestHarness.device },
             appVersion: { "3.2.1" },
+            reinstallKey: { TestHarness.reinstallKey },
             now: { clock.now },
             sleep: { sleeps.append($0) },
             random: { 0.5 }, // no jitter

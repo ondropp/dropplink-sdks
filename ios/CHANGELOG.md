@@ -25,6 +25,9 @@ In-app events, revenue and users (spec §11).
 - Privacy manifest declares Coarse Location, User ID, Email Address, Phone Number, Product Interaction and Purchase History
   (analytics, linked, not tracking). The install id's Device ID entry is now linked to the user (it is, once
   `identify` runs) and adds the App Functionality purpose (deep links).
+- Reinstall detection: a random key in the Keychain (this device only, never synced) survives the app
+  being deleted and is sent as `reinstallKey` on `/v1/init`, so a reinstall isn't counted (or billed) as
+  a new install. Needs server support for `reinstallKey` (Dropplink attribution, iOS phase 4).
 - `sdkVersion` is now `0.2.0`.
 
 ## 0.1.0 - 2026-10-20

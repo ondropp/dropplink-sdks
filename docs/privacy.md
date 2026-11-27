@@ -61,6 +61,7 @@ All requests go over HTTPS to `attribution.ondropp.app` and are signed with your
 | | `platform`, `appVersion`, `sdkVersion` | `android` / `ios`, your app's version name, the SDK version. |
 | | `device.model` | Android `Build.MODEL` (e.g. `Pixel 8`); iOS hardware identifier (e.g. `iPhone16,1`). |
 | | `device.osVersion`, `device.locale`, `device.timezone`, `device.screen` | OS version, language and region (e.g. `en-IN`), IANA time zone (e.g. `Asia/Kolkata`), screen width, height and pixel ratio. |
+| | `reinstallKey` (iOS only) | A random UUID the SDK keeps in the Keychain (below), the same on every launch. It survives the app being deleted, so the server can tell a reinstall from a new install (reinstalls aren't billed). Not derived from the device or any OS id. The server stores only a hash of it combined with your app's id, so it can't link installs across apps. |
 | | `installReferrer` (Android only, until the install is attributed) | The Google Play install referrer string for this install (what the Dropplink link put in the Play Store URL, e.g. `utm_source=…&click_id=c_…`), the click id parsed from it, and the referrer click / install begin timestamps. |
 | | IP address | Not sent by the SDK, but seen by our server as the source of every request. Hashed there with a salt that changes daily; the plain address is not stored. See [fingerprinting](#install-matching-by-ip-and-device-fingerprinting). |
 | | HTTP headers | The platform HTTP client's default `User-Agent`, plus the signing headers (`X-Key-Id`, `X-Timestamp`, `X-Signature`). |
@@ -84,10 +85,13 @@ server on each launch. To stop those too, don't call `initialize` (see [consent.
 | Android | `dropplink-queue.json`, same folder | Events and identify / logout calls not yet sent, plus the last identified user id. At most 1,000 events / 1 MB; events older than 7 days are dropped. |
 | iOS | `UserDefaults(suiteName: "app.ondropp.dropplink")` | `installId`, `attributed`, `attribution`, `trackingEnabled` |
 | iOS | `Application Support/Dropplink/dropplink-queue.json`, excluded from backup | As on Android |
+| iOS | Keychain, generic password `app.ondropp.dropplink` / `reinstallKey`, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, not synchronizable | `reinstallKey` |
 
 The Android folder is never backed up, so a restored phone gets a new install id. On iOS the UserDefaults
-suite follows the app's normal backup rules; the queue folder is excluded. Nothing is stored outside your
-app's sandbox, and everything is removed when the app is uninstalled. The SDK key's secret is never stored by
+suite follows the app's normal backup rules; the queue folder is excluded. Everything is removed when the app is
+uninstalled except the iOS `reinstallKey`: Keychain items outlive the app by design, which is what lets a
+reinstall be recognised. It is readable only by your app (its Keychain access group), stays on that one
+device (never iCloud Keychain, never restored to another phone) and is gone after an erase or reset. The SDK key's secret is never stored by
 the SDK (it is in your app's build config). `setTrackingEnabled(false)` empties the queue file and forgets the
 last user id; the install id and attribution stay.
 

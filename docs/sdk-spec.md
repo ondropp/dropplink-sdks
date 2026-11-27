@@ -151,6 +151,7 @@ Content-Type: application/json
 | `device.timezone` | IANA name, e.g. `Asia/Kolkata` | `TimeZone.current.identifier` |
 | `device.screen` | `{ w, h, dpr }` from display metrics, integer pixels | `{ w, h, dpr }` in pixels (`bounds × scale`) |
 | `installReferrer` | `{ raw, clickId?, referrerClickTs?, installBeginTs? }` until attributed | never sent |
+| `reinstallKey` | never sent | Keychain UUID (section 6), on every init; left out if the Keychain can't be read |
 
 Truncate strings to the contract's max lengths (model 100, osVersion 32, locale 35, timezone 64) rather
 than letting the server reject the request.
@@ -188,6 +189,13 @@ Android and in `Application Support/Dropplink/` on iOS (excluded from backup). I
 (write to a temp file, then rename) on every change, so a kill mid-write never corrupts it. A file that
 fails to parse is discarded with a debug log, never a crash.
 The secret is never stored by the SDK; it lives in the app's build config.
+
+iOS also keeps `reinstallKey`, a lower-case UUID, in the Keychain (generic password, service
+`app.ondropp.dropplink`, account `reinstallKey`, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, not
+synchronizable). It survives the app being deleted, unlike UserDefaults, so a reinstall arrives with a new
+`installId` and the old key: the server marks the install `reinstallOf` the earlier one and doesn't bill it.
+It is never shared with other apps, never leaves the device through iCloud or a backup, and the server
+stores only a hash scoped to the app. Android has no storage that survives uninstall, so it sends none.
 
 Why `noBackupFilesDir` on Android: Auto Backup restores `SharedPreferences` onto a new phone, and two
 devices would then share one install id. Files in `noBackupFilesDir` are never backed up, so brands don't

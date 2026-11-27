@@ -17,6 +17,8 @@ final class DropplinkCore: @unchecked Sendable {
         var scheduler: Scheduler
         var deviceInfo: @Sendable () async -> DeviceInfo
         var appVersion: @Sendable () -> String
+        /// The Keychain reinstall key, or `nil` when the Keychain isn't available.
+        var reinstallKey: @Sendable () -> String?
         var now: @Sendable () -> Date
         var sleep: @Sendable (TimeInterval) async -> Void
         var random: @Sendable () -> Double
@@ -31,6 +33,7 @@ final class DropplinkCore: @unchecked Sendable {
                 scheduler: DispatchScheduler(),
                 deviceInfo: { await DeviceInfo.current() },
                 appVersion: { currentAppVersion() },
+                reinstallKey: { ReinstallKey.loadOrCreate() },
                 now: { Date() },
                 sleep: { seconds in try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000)) },
                 random: { Double.random(in: 0...1) },
@@ -181,7 +184,8 @@ final class DropplinkCore: @unchecked Sendable {
             installId: installId,
             appVersion: environment.appVersion(),
             sdkVersion: config.sdkVersion,
-            device: await environment.deviceInfo()
+            device: await environment.deviceInfo(),
+            reinstallKey: environment.reinstallKey()
         )
         return try? APIClient.makeEncoder().encode(body)
     }

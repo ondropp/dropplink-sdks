@@ -96,6 +96,9 @@ uses (table at the top).
 | **Contact Info → Phone Number** | You pass `phone` | **Yes** | **No** | Analytics |
 | **Location → Coarse Location** | Always (country, region and city from the request) | **Yes** | **No** | Analytics |
 
+Device ID covers both the install id and, on iOS, the Keychain `reinstallKey` (one per device, used only to
+recognise a reinstall of your app).
+
 **Linked to the user: yes.** The install id is a stable per-install identifier and `identify` ties it to your
 user id, so everything sent with it can be connected to the person. Apple counts data as linked unless it is
 de-identified before collection; hashing an email or phone does not de-identify it. Answer "No" only for an

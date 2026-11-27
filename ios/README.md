@@ -295,13 +295,19 @@ vendor id), app and SDK version, device model, OS version, locale, time zone and
 contacts, no precise location (the server records country, region and city), no tracking. It stores the install id, last attribution and the
 `setTrackingEnabled` choice in `UserDefaults(suiteName: "app.ondropp.dropplink")`.
 
+It also keeps one random key in the Keychain (`app.ondropp.dropplink` / `reinstallKey`, this device only,
+never synced to iCloud or restored from a backup) and sends it on each launch. A Keychain item survives
+the app being deleted, so when someone reinstalls your app Dropplink reports it as a reinstall instead of
+a new install, and doesn't bill it. The key is used for nothing else and isn't shared with other apps;
+the server stores only a hash of it. Nothing to set up: it needs no entitlement or capability.
+
 If you call `track` / `identify`, it also sends the events and props you pass, your user id and SHA-256
 hashes of the email / phone you pass (never the plain values; they aren't stored either). Waiting entries
 are kept in `Application Support/Dropplink/dropplink-queue.json`, excluded from backup.
 `setTrackingEnabled(false)` deletes them and stops sending.
 
 `PrivacyInfo.xcprivacy` is bundled: `NSPrivacyTracking = false`, UserDefaults access with reason `CA92.1`,
-the install id declared as a Device ID (analytics and app functionality, linked to the user, not tracking),
+the install id and reinstall key declared as a Device ID (analytics and app functionality, linked to the user, not tracking),
 and Coarse Location, User ID, Email Address, Phone Number, Product Interaction and Purchase History (analytics, linked to the
 user, not tracking) for apps that use `identify` and `track`. `NSPrivacyTracking = false` holds only while the
 server's IP + device matching is off for your iOS app.

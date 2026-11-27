@@ -10,13 +10,16 @@ struct InitBody: Encodable, Equatable {
     let appVersion: String
     let sdkVersion: String
     let device: DeviceInfo
+    /// The Keychain key (`ReinstallKey`). Left out of the JSON when `nil`.
+    let reinstallKey: String?
 
-    init(installId: String, appVersion: String, sdkVersion: String, device: DeviceInfo) {
+    init(installId: String, appVersion: String, sdkVersion: String, device: DeviceInfo, reinstallKey: String? = nil) {
         self.installId = installId
         self.platform = "ios"
         self.appVersion = String(appVersion.truncated(to: 64))
         self.sdkVersion = String(sdkVersion.truncated(to: 32))
         self.device = device
+        self.reinstallKey = reinstallKey
     }
 }
 
