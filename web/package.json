@@ -1,6 +1,6 @@
 {
   "name": "@ondropp/dropplink-web",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Dropplink for websites: see what visitors from each creator, campaign and link do on your site, and credit website orders to the creator who brought them.",
   "type": "module",
   "main": "./dist/index.cjs",

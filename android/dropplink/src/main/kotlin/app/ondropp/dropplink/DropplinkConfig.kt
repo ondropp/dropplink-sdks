@@ -13,7 +13,7 @@ public data class DropplinkConfig @JvmOverloads constructor(
     public val secret: String,
     public val debug: Boolean = false,
     public val baseUrl: String = "https://attribution.ondropp.app",
-    /** Set only by the Flutter ("flutter") and React Native ("rn") wrappers; sdkVersion becomes "0.2.0-<wrapper>". */
+    /** Set only by the Flutter ("flutter") and React Native ("rn") wrappers; sdkVersion becomes "0.2.1-<wrapper>". */
     public val platformWrapper: String? = null,
 ) {
     // A data class would print the secret in logs and crash reports; never let it.

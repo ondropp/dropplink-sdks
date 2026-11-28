@@ -1,7 +1,7 @@
 # Store disclosures: Google Play Data safety and Apple App Privacy
 
 _For brands filling in the store forms for an app that includes the Dropplink Android, iOS, Flutter or React
-Native SDK (0.2.0). What the SDK sends is listed in [privacy.md](./privacy.md)._
+Native SDK (0.2.1). What the SDK sends is listed in [privacy.md](./privacy.md)._
 
 These are our recommended answers for **the Dropplink SDK's part** of your app. Your answers must also cover
 everything else your app and its other SDKs collect, and you are the one who submits them. Google's and

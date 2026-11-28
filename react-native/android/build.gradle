@@ -54,5 +54,5 @@ dependencies {
   // Version supplied by the app's React Native Gradle plugin.
   implementation "com.facebook.react:react-android"
   // `api` so apps can also call Dropplink.initialize natively from MainApplication.
-  api "app.ondropp:dropplink-android:0.2.0"
+  api "app.ondropp:dropplink-android:0.2.1"
 }

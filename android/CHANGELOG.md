@@ -3,7 +3,12 @@
 All notable changes to the Dropplink Android SDK (`app.ondropp:dropplink-android`). The version is shared
 with the iOS, Flutter and React Native SDKs ([docs/sdk-spec.md](../docs/sdk-spec.md)).
 
-## 0.2.0 - Unreleased
+## 0.2.1 - Unreleased
+
+No Android changes. Released to keep the version shared with iOS 0.2.1; `sdkVersion` is now
+`0.2.1`.
+
+## 0.2.0 - 2026-11-26
 
 In-app events, revenue and users (spec section 11).
 

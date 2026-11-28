@@ -5,7 +5,7 @@ import Dropplink // deliberately not @testable: this file only sees the public A
 /// If this file stops compiling, the change breaks the wrappers.
 final class PublicAPITests: XCTestCase {
     func testPublicSurfaceCompiles() {
-        XCTAssertEqual(Dropplink.version, "0.2.0")
+        XCTAssertEqual(Dropplink.version, "0.2.1")
 
         let config = DropplinkConfig(keyId: "ak_x", secret: "s", debug: false,
                                      baseURL: URL(string: "https://attribution.ondropp.app")!,

@@ -28,7 +28,7 @@ Native SDKs.
 ```kotlin
 // app/build.gradle.kts (mavenCentral() must be in your repositories)
 dependencies {
-    implementation("app.ondropp:dropplink-android:0.2.0")
+    implementation("app.ondropp:dropplink-android:0.2.1")
 }
 ```
 
@@ -194,7 +194,7 @@ Package `app.ondropp.dropplink`:
 
 ```kotlin
 object Dropplink {
-    const val VERSION = "0.2.0"
+    const val VERSION = "0.2.1"
     @JvmStatic fun initialize(context: Context, config: DropplinkConfig)
     @JvmStatic fun setDeepLinkListener(listener: DeepLinkListener?)
     @JvmStatic fun handleDeepLink(uri: Uri)

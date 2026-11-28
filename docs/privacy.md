@@ -1,6 +1,6 @@
 # Privacy: what the Dropplink SDKs collect
 
-_For brands and their privacy counsel. Covers SDK version 0.2.0. The behaviour is defined in
+_For brands and their privacy counsel. Covers SDK version 0.2.1. The behaviour is defined in
 [sdk-spec.md](./sdk-spec.md); if the two ever disagree, the spec is right and this page is a bug._
 
 Related: [store-disclosures.md](./store-disclosures.md) (Google Play Data safety and Apple App Privacy answers)

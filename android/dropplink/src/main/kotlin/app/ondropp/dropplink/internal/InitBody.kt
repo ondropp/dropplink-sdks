@@ -49,7 +49,7 @@ internal data class InstallReferrer(
     }
 }
 
-/** `0.2.0` for native apps, `0.2.0-flutter` / `0.2.0-rn` for the wrappers (spec section 1). */
+/** `0.2.1` for native apps, `0.2.1-flutter` / `0.2.1-rn` for the wrappers (spec section 1). */
 internal fun sdkVersionFor(platformWrapper: String?): String =
     if (platformWrapper.isNullOrBlank()) Dropplink.VERSION else "${Dropplink.VERSION}-$platformWrapper"
 

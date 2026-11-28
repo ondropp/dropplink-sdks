@@ -3,6 +3,11 @@
 All notable changes to `dropplink_flutter`. The version is shared with the Android, iOS and React Native
 SDKs ([docs/sdk-spec.md](../docs/sdk-spec.md)).
 
+## 0.2.1 - Unreleased
+
+- Built on the `Dropplink` pod 0.2.1, which detects reinstalls on iOS with a Keychain key, and
+  `app.ondropp:dropplink-android` 0.2.1. Reports `0.2.1-flutter`. No Dart API changes.
+
 ## 0.2.0 - 2026-10-22
 
 - `Dropplink.track(name, props:, revenue:)` records in-app events. The native SDK validates them, keeps them

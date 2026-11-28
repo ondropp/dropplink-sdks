@@ -34,9 +34,9 @@ retries, deep-link delivery and logging.
 calls to the native SDK and convert results. No signing, storage or retry logic is duplicated in Dart or JS.
 The web SDK is separate (section 12): a website has no install, so it shares no code with the app SDKs.
 
-All five share one version number (`0.2.0`), released together (see [releasing.md](./releasing.md)). The
+All five share one version number (`0.2.1`), released together (see [releasing.md](./releasing.md)). The
 `sdkVersion` sent to the server is the SDK's own version, with a suffix for wrappers so the dashboard can
-tell them apart: `0.2.0` (native), `0.2.0-flutter`, `0.2.0-rn`.
+tell them apart: `0.2.1` (native), `0.2.1-flutter`, `0.2.1-rn`.
 
 ## 2. Public API
 
