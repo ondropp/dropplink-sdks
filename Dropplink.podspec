@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'Dropplink'
-  s.version          = '0.2.0'
+  s.version          = '0.2.1'
   s.summary          = 'Install attribution, deferred deep links and in-app events for apps using Dropplink links.'
   s.description      = <<-DESC
     Dropplink attributes app installs to the Dropplink link that drove them, delivers deferred deep links

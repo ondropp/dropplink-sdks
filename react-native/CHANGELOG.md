@@ -3,7 +3,11 @@
 All notable changes to `@ondropp/dropplink-react-native`. The version is shared with the Android, iOS and
 Flutter SDKs ([docs/sdk-spec.md](../docs/sdk-spec.md)).
 
-## Unreleased
+## 0.2.1 - Unreleased
+
+- Built on the `Dropplink` pod 0.2.1, which detects reinstalls on iOS with a Keychain key, and
+  `app.ondropp:dropplink-android` 0.2.1. Reports `0.2.1-rn`. No JavaScript API changes.
+- The podspec's git source now points at the `v<version>` tags the repo actually uses.
 
 ## 0.2.0 - 2026-10-22
 

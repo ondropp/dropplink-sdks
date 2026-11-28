@@ -318,7 +318,7 @@ when the last one goes, so the native SDK keeps buffering links while nobody in 
 reload the native listener is cleared too.
 
 The native config is always created with `platformWrapper = "rn"`, so the server sees `sdkVersion`
-`0.2.0-rn`.
+`0.2.1-rn`.
 
 ## Development
 

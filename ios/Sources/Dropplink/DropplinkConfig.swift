@@ -27,7 +27,7 @@ public struct DropplinkConfig: Sendable {
         self.platformWrapper = platformWrapper?.isEmpty == true ? nil : platformWrapper
     }
 
-    /// `0.2.0` for native apps, `0.2.0-flutter` / `0.2.0-rn` through a wrapper.
+    /// `0.2.1` for native apps, `0.2.1-flutter` / `0.2.1-rn` through a wrapper.
     var sdkVersion: String {
         platformWrapper.map { "\(Dropplink.version)-\($0)" } ?? Dropplink.version
     }

@@ -26,11 +26,11 @@ iOS 13+, Swift 5.9+, no third-party dependencies. Behaviour is specified in
 
 ### Swift Package Manager
 
-Xcode → **File → Add Package Dependencies…**, enter the repository URL, pick version `0.2.0`, add the
+Xcode → **File → Add Package Dependencies…**, enter the repository URL, pick version `0.2.1`, add the
 `Dropplink` library to your app target. Or in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/ondropp/dropplink-sdks.git", from: "0.2.0"),
+.package(url: "https://github.com/ondropp/dropplink-sdks.git", from: "0.2.1"),
 // target dependencies:
 .product(name: "Dropplink", package: "dropplink-sdks"),
 ```
@@ -38,7 +38,7 @@ Xcode → **File → Add Package Dependencies…**, enter the repository URL, pi
 ### CocoaPods
 
 ```ruby
-pod 'Dropplink', '~> 0.2.0'
+pod 'Dropplink', '~> 0.2.1'
 ```
 
 ## Keys
@@ -205,7 +205,7 @@ Dropplink: identify user_8812 sent
 
 ```swift
 public enum Dropplink {
-    static let version: String                                  // "0.2.0"
+    static let version: String                                  // "0.2.1"
     static func initialize(config: DropplinkConfig)
     static func setDeepLinkListener(_ listener: ((DeepLink) -> Void)?)
     static func handleDeepLink(_ url: URL)

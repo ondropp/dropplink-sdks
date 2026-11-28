@@ -10,8 +10,8 @@ import Foundation
 ///
 /// Every call is safe from any thread, never throws and never blocks on the network.
 public enum Dropplink {
-    /// The SDK version. Wrappers append a suffix to what is sent to the server (`0.2.0-flutter`).
-    public static let version = "0.2.0"
+    /// The SDK version. Wrappers append a suffix to what is sent to the server (`0.2.1-flutter`).
+    public static let version = "0.2.1"
 
     /// The process-wide SDK instance. Tests build their own `DropplinkCore` with fakes instead.
     static let core = DropplinkCore(environment: .live())

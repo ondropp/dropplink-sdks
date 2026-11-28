@@ -42,7 +42,7 @@ import java.util.concurrent.Executors
 public object Dropplink {
 
     /** The SDK version. Wrappers report `"$VERSION-flutter"` / `"$VERSION-rn"` to the server. */
-    public const val VERSION: String = "0.2.0"
+    public const val VERSION: String = "0.2.1"
 
     private const val MAX_EARLY_LINKS = 10
     private const val MAX_EARLY_CALLS = 100

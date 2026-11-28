@@ -52,9 +52,9 @@ class InitBodyTest {
 
     @Test
     fun sdkVersionCarriesTheWrapperSuffix() {
-        assertEquals("0.2.0", sdkVersionFor(null))
-        assertEquals("0.2.0-flutter", sdkVersionFor("flutter"))
-        assertEquals("0.2.0-rn", sdkVersionFor("rn"))
+        assertEquals("0.2.1", sdkVersionFor(null))
+        assertEquals("0.2.1-flutter", sdkVersionFor("flutter"))
+        assertEquals("0.2.1-rn", sdkVersionFor("rn"))
     }
 
     @Test
