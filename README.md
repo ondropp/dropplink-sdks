@@ -1,4 +1,4 @@
-# Dropplink SDKs
+# Dropplink SDKs 
 
 The SDKs brands add to their apps so Dropplink can attribute installs to the link, channel and creator
 that brought them, and open deep links, and to their websites so orders placed there are credited the same way.
